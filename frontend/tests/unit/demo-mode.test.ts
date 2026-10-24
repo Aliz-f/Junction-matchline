@@ -48,8 +48,12 @@ describe("demo /meta", () => {
     expect(demoMeta().default_competition).toBe("PL");
   });
 
-  it("derives capabilities.events from the manifest rather than asserting it", () => {
-    expect(demoMeta().capabilities.events).toBe(manifest.fixtures.some((f) => f.capabilities.events));
+  it("matches the BE-01 backend on capabilities.events, which the backend owns", () => {
+    // BE-01 `/api/v1/meta` returns events=false in DEMO mode. Deriving this
+    // from the manifest would give true, because some fixtures advertise event
+    // data — so demo mode would silently disagree with the real backend.
+    expect(demoMeta().capabilities.events).toBe(false);
+    expect(manifest.fixtures.some((f) => f.capabilities.events)).toBe(true);
   });
 });
 

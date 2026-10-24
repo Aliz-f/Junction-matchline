@@ -50,13 +50,17 @@ export function demoHealth(): HealthResponse {
  * `server_now_utc` is the manifest's own `demo_clock`, and `demo_clock_frozen`
  * is true because nothing advances it. `demo_epoch` is 1 per A3b.
  *
- * UNRESOLVED (FE00_HANDOFF Q2): Appendix A does not specify the initial
- * `scenario_revision`, nor `capabilities.events` / `live_updates`, in DEMO mode.
- * The values below are demo-mode placeholders so the shell can render, NOT a
- * frozen contract decision — `capabilities.events` reflects whether any
- * manifest fixture actually advertises event data, and `live_updates` is false
- * because a frozen clock cannot produce live updates. Replace all three with
- * the backend's answer at G1; do not treat them as agreed.
+ * FE00_HANDOFF Q2 is now ANSWERED by BE-01 (`backend/app/main.py`), which is
+ * authoritative for feature flags. Every value below mirrors what that handler
+ * returns in DEMO mode, so demo mode and the real backend agree:
+ *
+ *   demo_epoch 1, scenario_revision 1, whatif_sharing false, live_updates false,
+ *   events FALSE, and server_now_utc from `settings.demo_clock_iso`, which
+ *   equals the manifest `demo_clock` (2026-10-24T12:00:00Z).
+ *
+ * `capabilities.events` is deliberately NOT derived from the manifest fixtures
+ * here. Some fixtures do advertise event data, so deriving it would yield true
+ * and silently disagree with the backend. The backend owns this flag.
  */
 export function demoMeta(): MetaView {
   return {
@@ -69,7 +73,7 @@ export function demoMeta(): MetaView {
     scenario_revision: 1,
     capabilities: {
       whatif_sharing: false,
-      events: manifest.fixtures.some((fixture) => fixture.capabilities.events),
+      events: false,
       live_updates: false,
     },
   };
