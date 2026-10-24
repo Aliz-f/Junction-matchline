@@ -236,6 +236,53 @@ class WhatifThreadRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class WhatifMessageRecord(Base):
+    """Private thread turn retained for BE-08; never projected to public rooms."""
+    __tablename__ = "whatif_messages"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    thread_id: Mapped[str] = mapped_column(ForeignKey("whatif_threads.id"), index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    body: Mapped[str] = mapped_column(String(4000))
+    evidence_refs_json: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WhatifRequestRecord(Base):
+    """Durable idempotency/reservation record for the later private AI worker."""
+    __tablename__ = "whatif_requests"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    thread_id: Mapped[str] = mapped_column(ForeignKey("whatif_threads.id"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(36))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    reservation_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    response_status: Mapped[int | None] = mapped_column(Integer)
+    response_snapshot_json: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (UniqueConstraint("thread_id", "idempotency_key"),)
+
+
+class AiDailyQuotaRecord(Base):
+    __tablename__ = "ai_daily_quotas"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    quota_date_utc: Mapped[str] = mapped_column(String(10))
+    reserved_count: Mapped[int] = mapped_column(Integer, default=0)
+    completed_count: Mapped[int] = mapped_column(Integer, default=0)
+    __table_args__ = (UniqueConstraint("user_id", "quota_date_utc"),)
+
+
+class UserBadgeRecord(Base):
+    __tablename__ = "user_badges"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    badge_code: Mapped[str] = mapped_column(String(64))
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    evidence_json: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    __table_args__ = (UniqueConstraint("user_id", "badge_code"),)
+
+
 class ReportRecord(Base):
     __tablename__ = "reports"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -244,3 +291,4 @@ class ReportRecord(Base):
     target_id: Mapped[str] = mapped_column(String(36))
     reason: Mapped[str] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(16), default="OPEN")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.football_models import (
     AuditRecord,
+    AiDailyQuotaRecord,
     Competition,
     Match,
     MatchEventRecord,
@@ -25,7 +26,10 @@ from app.db.football_models import (
     SeasonTeamHomeVenue,
     StandingsSnapshot,
     Team,
+    UserBadgeRecord,
     Venue,
+    WhatifMessageRecord,
+    WhatifRequestRecord,
     WhatifThreadRecord,
 )
 from app.seed.loader import load_demo_manifest
@@ -41,6 +45,10 @@ async def seed_demo(session: AsyncSession) -> None:
     # Delete children first: PostgreSQL correctly enforces that a baseline reset
     # cannot leave audit/replay rows attached to replaced synthetic fixtures.
     await session.execute(delete(ReportRecord))
+    await session.execute(delete(WhatifRequestRecord))
+    await session.execute(delete(WhatifMessageRecord))
+    await session.execute(delete(AiDailyQuotaRecord))
+    await session.execute(delete(UserBadgeRecord))
     await session.execute(delete(WhatifThreadRecord))
     await session.execute(delete(RoomMessageRecord))
     await session.execute(delete(RoomChangeEvent))
