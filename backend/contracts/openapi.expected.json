@@ -21,6 +21,58 @@
         "title": "AuthUserResponse",
         "type": "object"
       },
+      "CompetitionSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "brand_key": {
+            "title": "Brand Key",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "country_code": {
+            "title": "Country Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "brand_key",
+          "country_code"
+        ],
+        "title": "CompetitionSummary",
+        "type": "object"
+      },
+      "CompetitionsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CompetitionSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CompetitionsResponse",
+        "type": "object"
+      },
       "ErrorBody": {
         "additionalProperties": false,
         "properties": {
@@ -94,19 +146,6 @@
         "title": "FavoriteResponse",
         "type": "object"
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
-        "type": "object"
-      },
       "HealthResponse": {
         "additionalProperties": false,
         "properties": {
@@ -148,6 +187,23 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MatchdaysResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "MatchdaysResponse",
         "type": "object"
       },
       "MetaCapabilities": {
@@ -395,6 +451,60 @@
         "title": "RoomMessageRequest",
         "type": "object"
       },
+      "TeamSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "crest_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crest Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short_name": {
+            "title": "Short Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "crest_url"
+        ],
+        "title": "TeamSummary",
+        "type": "object"
+      },
+      "TeamsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TeamSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TeamsResponse",
+        "type": "object"
+      },
       "UserPublic": {
         "additionalProperties": false,
         "properties": {
@@ -434,39 +544,6 @@
           "favorite_team_id"
         ],
         "title": "UserPublic",
-        "type": "object"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
         "type": "object"
       },
       "WhatifMessageRequest": {
@@ -513,7 +590,7 @@
   },
   "info": {
     "title": "Matchline API",
-    "version": "0.0.0-be00"
+    "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -541,43 +618,61 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unprocessable Entity"
           }
         },
-        "summary": "Login"
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/auth/logout": {
       "post": {
-        "operationId": "be00_post__api_v1_auth_logout_api_v1_auth_logout_post",
+        "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "204": {
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -585,15 +680,48 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           }
         },
-        "summary": "Be00 Post  Api V1 Auth Logout"
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/auth/me": {
       "get": {
-        "operationId": "be00_get__api_v1_auth_me_api_v1_auth_me_get",
+        "operationId": "me_api_v1_auth_me_get",
         "responses": {
           "200": {
             "content": {
@@ -605,7 +733,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -613,10 +741,43 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           }
         },
-        "summary": "Be00 Get  Api V1 Auth Me"
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/auth/register": {
@@ -633,7 +794,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -643,43 +804,68 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unprocessable Entity"
           }
         },
-        "summary": "Register"
+        "summary": "Register",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/competitions": {
       "get": {
-        "operationId": "be00_get__api_v1_competitions_api_v1_competitions_get",
+        "operationId": "competitions_api_v1_competitions_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionsResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -687,25 +873,87 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Competitions"
+        "summary": "Competitions"
       }
     },
     "/api/v1/competitions/{code}/matchdays": {
       "get": {
-        "operationId": "be00_get__api_v1_competitions__code__matchdays_api_v1_competitions__code__matchdays_get",
+        "operationId": "matchdays_api_v1_competitions__code__matchdays_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "season",
+            "required": true,
+            "schema": {
+              "title": "Season",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MatchdaysResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -713,15 +961,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Competitions {Code} Matchdays"
+        "summary": "Matchdays"
       }
     },
     "/api/v1/health": {
       "get": {
-        "operationId": "be00_get__api_v1_health_api_v1_health_get",
+        "operationId": "health_api_v1_health_get",
         "responses": {
           "200": {
             "content": {
@@ -733,7 +1021,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -741,15 +1029,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Health"
+        "summary": "Health"
       }
     },
     "/api/v1/impact/relevant": {
       "get": {
-        "operationId": "be00_get__api_v1_impact_relevant_api_v1_impact_relevant_get",
+        "operationId": "contract_get__api_v1_impact_relevant_api_v1_impact_relevant_get",
         "responses": {
           "200": {
             "content": {
@@ -759,7 +1087,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -767,15 +1095,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Impact Relevant"
+        "summary": "Contract Get  Api V1 Impact Relevant"
       }
     },
     "/api/v1/journey": {
       "get": {
-        "operationId": "be00_get__api_v1_journey_api_v1_journey_get",
+        "operationId": "contract_get__api_v1_journey_api_v1_journey_get",
         "responses": {
           "200": {
             "content": {
@@ -785,7 +1153,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -793,15 +1161,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Journey"
+        "summary": "Contract Get  Api V1 Journey"
       }
     },
     "/api/v1/map/stadiums": {
       "get": {
-        "operationId": "be00_get__api_v1_map_stadiums_api_v1_map_stadiums_get",
+        "operationId": "contract_get__api_v1_map_stadiums_api_v1_map_stadiums_get",
         "responses": {
           "200": {
             "content": {
@@ -811,7 +1219,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -819,15 +1227,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Map Stadiums"
+        "summary": "Contract Get  Api V1 Map Stadiums"
       }
     },
     "/api/v1/matches": {
       "get": {
-        "operationId": "be00_get__api_v1_matches_api_v1_matches_get",
+        "operationId": "contract_get__api_v1_matches_api_v1_matches_get",
         "responses": {
           "200": {
             "content": {
@@ -837,7 +1285,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -845,15 +1293,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches"
+        "summary": "Contract Get  Api V1 Matches"
       }
     },
     "/api/v1/matches/{id}": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__api_v1_matches__id__get",
+        "operationId": "contract_get__api_v1_matches__id__api_v1_matches__id__get",
         "responses": {
           "200": {
             "content": {
@@ -863,7 +1351,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -871,15 +1359,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id}"
+        "summary": "Contract Get  Api V1 Matches {Id}"
       }
     },
     "/api/v1/matches/{id}/impact": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__impact_api_v1_matches__id__impact_get",
+        "operationId": "contract_get__api_v1_matches__id__impact_api_v1_matches__id__impact_get",
         "responses": {
           "200": {
             "content": {
@@ -889,7 +1417,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -897,15 +1425,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id} Impact"
+        "summary": "Contract Get  Api V1 Matches {Id} Impact"
       }
     },
     "/api/v1/matches/{id}/leaderboard": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__leaderboard_api_v1_matches__id__leaderboard_get",
+        "operationId": "contract_get__api_v1_matches__id__leaderboard_api_v1_matches__id__leaderboard_get",
         "responses": {
           "200": {
             "content": {
@@ -915,7 +1483,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -923,15 +1491,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id} Leaderboard"
+        "summary": "Contract Get  Api V1 Matches {Id} Leaderboard"
       }
     },
     "/api/v1/matches/{id}/predictions": {
       "post": {
-        "operationId": "predict_api_v1_matches__id__predictions_post",
+        "operationId": "prediction_stub_api_v1_matches__id__predictions_post",
         "parameters": [
           {
             "in": "path",
@@ -962,17 +1570,47 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Entity"
           },
-          "501": {
+          "502": {
             "content": {
               "application/json": {
                 "schema": {
@@ -980,15 +1618,15 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Predict"
+        "summary": "Prediction Stub"
       }
     },
     "/api/v1/matches/{id}/predictions/me": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__predictions_me_api_v1_matches__id__predictions_me_get",
+        "operationId": "contract_get__api_v1_matches__id__predictions_me_api_v1_matches__id__predictions_me_get",
         "responses": {
           "200": {
             "content": {
@@ -998,7 +1636,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1006,15 +1644,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id} Predictions Me"
+        "summary": "Contract Get  Api V1 Matches {Id} Predictions Me"
       }
     },
     "/api/v1/matches/{id}/rooms": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__rooms_api_v1_matches__id__rooms_get",
+        "operationId": "contract_get__api_v1_matches__id__rooms_api_v1_matches__id__rooms_get",
         "responses": {
           "200": {
             "content": {
@@ -1024,7 +1702,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1032,13 +1710,53 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id} Rooms"
+        "summary": "Contract Get  Api V1 Matches {Id} Rooms"
       },
       "post": {
-        "operationId": "create_room_api_v1_matches__id__rooms_post",
+        "operationId": "room_stub_api_v1_matches__id__rooms_post",
         "parameters": [
           {
             "in": "path",
@@ -1069,17 +1787,7 @@
             },
             "description": "Successful Response"
           },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1087,15 +1795,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Create Room"
+        "summary": "Room Stub"
       }
     },
     "/api/v1/matches/{id}/whatif/threads": {
       "get": {
-        "operationId": "be00_get__api_v1_matches__id__whatif_threads_api_v1_matches__id__whatif_threads_get",
+        "operationId": "contract_get__api_v1_matches__id__whatif_threads_api_v1_matches__id__whatif_threads_get",
         "responses": {
           "200": {
             "content": {
@@ -1105,7 +1853,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1113,13 +1861,53 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Matches {Id} Whatif Threads"
+        "summary": "Contract Get  Api V1 Matches {Id} Whatif Threads"
       },
       "post": {
-        "operationId": "create_whatif_thread_api_v1_matches__id__whatif_threads_post",
+        "operationId": "whatif_thread_stub_api_v1_matches__id__whatif_threads_post",
         "parameters": [
           {
             "in": "path",
@@ -1150,17 +1938,7 @@
             },
             "description": "Successful Response"
           },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1168,15 +1946,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Create Whatif Thread"
+        "summary": "Whatif Thread Stub"
       }
     },
     "/api/v1/meta": {
       "get": {
-        "operationId": "be00_get__api_v1_meta_api_v1_meta_get",
+        "operationId": "meta_api_v1_meta_get",
         "responses": {
           "200": {
             "content": {
@@ -1188,7 +2006,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1196,15 +2014,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Meta"
+        "summary": "Meta"
       }
     },
     "/api/v1/reports": {
       "post": {
-        "operationId": "report_api_v1_reports_post",
+        "operationId": "report_stub_api_v1_reports_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1224,17 +2082,47 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Entity"
           },
-          "501": {
+          "502": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1242,15 +2130,15 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Report"
+        "summary": "Report Stub"
       }
     },
     "/api/v1/rooms": {
       "get": {
-        "operationId": "be00_get__api_v1_rooms_api_v1_rooms_get",
+        "operationId": "contract_get__api_v1_rooms_api_v1_rooms_get",
         "responses": {
           "200": {
             "content": {
@@ -1260,7 +2148,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1268,15 +2156,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Rooms"
+        "summary": "Contract Get  Api V1 Rooms"
       }
     },
     "/api/v1/rooms/{id}": {
       "get": {
-        "operationId": "be00_get__api_v1_rooms__id__api_v1_rooms__id__get",
+        "operationId": "contract_get__api_v1_rooms__id__api_v1_rooms__id__get",
         "responses": {
           "200": {
             "content": {
@@ -1286,7 +2214,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1294,15 +2222,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Rooms {Id}"
+        "summary": "Contract Get  Api V1 Rooms {Id}"
       }
     },
     "/api/v1/rooms/{id}/changes": {
       "get": {
-        "operationId": "be00_get__api_v1_rooms__id__changes_api_v1_rooms__id__changes_get",
+        "operationId": "contract_get__api_v1_rooms__id__changes_api_v1_rooms__id__changes_get",
         "responses": {
           "200": {
             "content": {
@@ -1312,7 +2280,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1320,15 +2288,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Rooms {Id} Changes"
+        "summary": "Contract Get  Api V1 Rooms {Id} Changes"
       }
     },
     "/api/v1/rooms/{id}/messages": {
       "get": {
-        "operationId": "be00_get__api_v1_rooms__id__messages_api_v1_rooms__id__messages_get",
+        "operationId": "contract_get__api_v1_rooms__id__messages_api_v1_rooms__id__messages_get",
         "responses": {
           "200": {
             "content": {
@@ -1338,7 +2346,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1346,13 +2354,53 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Rooms {Id} Messages"
+        "summary": "Contract Get  Api V1 Rooms {Id} Messages"
       },
       "post": {
-        "operationId": "post_room_message_api_v1_rooms__id__messages_post",
+        "operationId": "room_message_stub_api_v1_rooms__id__messages_post",
         "parameters": [
           {
             "in": "path",
@@ -1383,17 +2431,47 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Entity"
           },
-          "501": {
+          "502": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1401,15 +2479,15 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Post Room Message"
+        "summary": "Room Message Stub"
       }
     },
     "/api/v1/standings": {
       "get": {
-        "operationId": "be00_get__api_v1_standings_api_v1_standings_get",
+        "operationId": "contract_get__api_v1_standings_api_v1_standings_get",
         "responses": {
           "200": {
             "content": {
@@ -1419,7 +2497,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1427,25 +2505,78 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Standings"
+        "summary": "Contract Get  Api V1 Standings"
       }
     },
     "/api/v1/teams": {
       "get": {
-        "operationId": "be00_get__api_v1_teams_api_v1_teams_get",
+        "operationId": "teams_api_v1_teams_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "competition",
+            "required": true,
+            "schema": {
+              "title": "Competition",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsResponse"
+                }
               }
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1453,15 +2584,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Teams"
+        "summary": "Teams"
       }
     },
     "/api/v1/users/me/badges": {
       "get": {
-        "operationId": "be00_get__api_v1_users_me_badges_api_v1_users_me_badges_get",
+        "operationId": "contract_get__api_v1_users_me_badges_api_v1_users_me_badges_get",
         "responses": {
           "200": {
             "content": {
@@ -1471,7 +2642,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1479,15 +2650,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Users Me Badges"
+        "summary": "Contract Get  Api V1 Users Me Badges"
       }
     },
     "/api/v1/users/me/favorite-team": {
       "put": {
-        "operationId": "put_favorite_api_v1_users_me_favorite_team_put",
+        "operationId": "favorite_stub_api_v1_users_me_favorite_team_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1509,17 +2720,47 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Entity"
           },
-          "501": {
+          "502": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1527,15 +2768,15 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Put Favorite"
+        "summary": "Favorite Stub"
       }
     },
     "/api/v1/users/me/predictions": {
       "get": {
-        "operationId": "be00_get__api_v1_users_me_predictions_api_v1_users_me_predictions_get",
+        "operationId": "contract_get__api_v1_users_me_predictions_api_v1_users_me_predictions_get",
         "responses": {
           "200": {
             "content": {
@@ -1545,7 +2786,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1553,15 +2794,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Users Me Predictions"
+        "summary": "Contract Get  Api V1 Users Me Predictions"
       }
     },
     "/api/v1/users/me/profile": {
       "get": {
-        "operationId": "be00_get__api_v1_users_me_profile_api_v1_users_me_profile_get",
+        "operationId": "contract_get__api_v1_users_me_profile_api_v1_users_me_profile_get",
         "responses": {
           "200": {
             "content": {
@@ -1571,7 +2852,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1579,15 +2860,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Users Me Profile"
+        "summary": "Contract Get  Api V1 Users Me Profile"
       }
     },
     "/api/v1/users/me/whatif/threads": {
       "get": {
-        "operationId": "be00_get__api_v1_users_me_whatif_threads_api_v1_users_me_whatif_threads_get",
+        "operationId": "contract_get__api_v1_users_me_whatif_threads_api_v1_users_me_whatif_threads_get",
         "responses": {
           "200": {
             "content": {
@@ -1597,7 +2918,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1605,15 +2926,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Users Me Whatif Threads"
+        "summary": "Contract Get  Api V1 Users Me Whatif Threads"
       }
     },
     "/api/v1/whatif/threads/{thread_id}": {
       "get": {
-        "operationId": "be00_get__api_v1_whatif_threads__thread_id__api_v1_whatif_threads__thread_id__get",
+        "operationId": "contract_get__api_v1_whatif_threads__thread_id__api_v1_whatif_threads__thread_id__get",
         "responses": {
           "200": {
             "content": {
@@ -1623,7 +2984,7 @@
             },
             "description": "Successful Response"
           },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1631,15 +2992,55 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Be00 Get  Api V1 Whatif Threads {Thread Id}"
+        "summary": "Contract Get  Api V1 Whatif Threads {Thread Id}"
       }
     },
     "/api/v1/whatif/threads/{thread_id}/messages": {
       "post": {
-        "operationId": "post_whatif_message_api_v1_whatif_threads__thread_id__messages_post",
+        "operationId": "whatif_message_stub_api_v1_whatif_threads__thread_id__messages_post",
         "parameters": [
           {
             "in": "path",
@@ -1670,17 +3071,7 @@
             },
             "description": "Successful Response"
           },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "501": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1688,10 +3079,50 @@
                 }
               }
             },
-            "description": "BE-00 route stub"
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
           }
         },
-        "summary": "Post Whatif Message"
+        "summary": "Whatif Message Stub"
       }
     }
   }
