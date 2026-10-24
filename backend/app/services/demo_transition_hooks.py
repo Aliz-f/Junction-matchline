@@ -11,6 +11,8 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.predictions import settle_finished_predictions
+
 
 class DemoTransitionHook(Protocol):
     async def after_transition(
@@ -23,3 +25,12 @@ class NoopDemoTransitionHook:
         self, session: AsyncSession, scenario_name: str, transitioned_match_ids: Sequence[str]
     ) -> None:
         del session, scenario_name, transitioned_match_ids
+
+
+class PredictionSettlementHook:
+    """BE-07 hook used by the demo CLI so status/score transition and scoring commit together."""
+    async def after_transition(
+        self, session: AsyncSession, scenario_name: str, transitioned_match_ids: Sequence[str]
+    ) -> None:
+        if scenario_name == "upcoming_finished":
+            await settle_finished_predictions(session, list(transitioned_match_ids))

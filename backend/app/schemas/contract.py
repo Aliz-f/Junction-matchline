@@ -379,12 +379,25 @@ class PredictionHistoryItem(ContractModel):
     match: MatchSummary
 
 
+class PredictionHistoryResponse(ContractModel):
+    items: list[PredictionHistoryItem]
+    next_cursor: str | None
+
+
 class LeaderboardEntry(ContractModel):
     user_id: UUID
     display_name: str
     points: int
     rank: int
     public_badges: list[BadgeView]
+
+
+class LeaderboardResponse(ContractModel):
+    items: list[LeaderboardEntry]
+
+
+class BadgesResponse(ContractModel):
+    items: list[BadgeView]
 
 
 class RoomCreateRequest(ContractModel):

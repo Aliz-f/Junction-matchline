@@ -17,7 +17,7 @@ from app.seed.loader import load_demo_manifest, scenario_data
 from app.seed.service import seed_demo
 from app.services.demo_transition_hooks import (
     DemoTransitionHook,
-    NoopDemoTransitionHook,
+    PredictionSettlementHook,
 )
 
 _PREDECESSORS = {
@@ -31,7 +31,7 @@ async def apply_scenario_to_session(
 ) -> None:
     """Apply a scenario within the caller transaction for CLI and integration tests."""
     scenario = scenario_data(name)
-    hook = hook or NoopDemoTransitionHook()
+    hook = hook or PredictionSettlementHook()
     if name == "baseline":
         await seed_demo(session, commit=False)
         return
@@ -75,7 +75,7 @@ async def apply_scenario(name: str, hook: DemoTransitionHook | None = None) -> N
     holder = SimpleNamespace(state=SimpleNamespace())
     configure_database(holder, settings.database_url)
     async with holder.state.session_factory() as session:
-        await apply_scenario_to_session(session, name, hook=hook)
+        await apply_scenario_to_session(session, name, hook=hook or PredictionSettlementHook())
         if name == "baseline":
             await seed_demo_accounts(session, settings)
         await session.commit()
