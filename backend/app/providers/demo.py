@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.providers.base import ProviderCapabilities, ProviderDataUnavailable, SportsDataProvider
+from app.providers.base import (
+    ProviderCapabilities,
+    ProviderDataUnavailable,
+    SportsDataProvider,
+)
 from app.seed.loader import load_demo_manifest
 
 

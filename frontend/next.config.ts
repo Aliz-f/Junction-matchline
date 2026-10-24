@@ -19,6 +19,7 @@ import type { NextConfig } from "next";
 const backendBaseUrl = process.env.MATCHLINE_API_BASE_URL?.replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   // Fail the build on type or lint errors rather than shipping them.

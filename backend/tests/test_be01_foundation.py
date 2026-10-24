@@ -11,7 +11,7 @@ from app.main import create_app
 
 
 def client() -> TestClient:
-    app = create_app(Settings(database_url="postgresql+asyncpg://matchline:unavailable@127.0.0.1:65432/matchline"))
+    app = create_app(Settings(database_url="postgresql+asyncpg://matchline:unavailable@127.0.0.1:1/matchline"))
     return TestClient(app)
 
 

@@ -121,8 +121,8 @@ then run:
 ```sh
 docker compose up -d postgres
 cd backend
-python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.lock -e .
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r requirements.lock
 alembic upgrade head
 .venv/bin/uvicorn app.main:app --reload --port 8000
 ```
@@ -137,3 +137,19 @@ are provisioned.
 See [INTEGRATION_STATUS.md](docs/INTEGRATION_STATUS.md) for actual local evidence
 and [the manual GitHub checklist](docs/TEAM_OWNERSHIP.md#github-setup-checklist-manual-not-configured)
 for review/CI protection settings after remote access is authorized.
+
+## Container deployment
+
+Copy `.env.example` to `.env`, replace `MATCHLINE_POSTGRES_PASSWORD`, and set
+`MATCHLINE_FRONTEND_ORIGIN` to the public HTTPS origin. Set
+`SESSION_COOKIE_SECURE=true` for HTTPS. Then start the complete stack:
+
+```sh
+docker compose up --build -d
+```
+
+Only the Next.js service is exposed on port 3000. It proxies browser `/api/v1`
+requests to the internal API service; PostgreSQL and FastAPI remain private to
+the Compose network. The one-shot `migrate` service runs Alembic before the API
+starts. CI validates backend/frontend checks and builds these images, but does
+not publish images or deploy without an approved registry and target.
