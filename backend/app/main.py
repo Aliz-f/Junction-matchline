@@ -46,7 +46,7 @@ from app.schemas.contract import (
     WhatifThreadRequest,
 )
 
-ERRORS: dict[int, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
+ERRORS: dict[int | str, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
 
 def utc_z(value: datetime) -> str:

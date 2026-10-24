@@ -17,7 +17,7 @@ from app.db.session import get_session
 from app.schemas.contract import AuthUserResponse, ErrorEnvelope, LoginRequest, Plan, RegisterRequest, Role, UserPublic
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-ERRORS: dict[int, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}}
+ERRORS: dict[int | str, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}}
 
 
 def user_public(user: UserRecord) -> UserPublic:
