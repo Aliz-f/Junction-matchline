@@ -179,8 +179,14 @@ class PredictionRecord(Base):
     away_score: Mapped[int | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Set once the authoritative cutoff has passed; a later schedule update
+    # must not silently reopen this accepted prediction.
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(16), default="PENDING")
     points: Mapped[int | None]
+    # Settlement order, rather than submission order, drives the rolling badge
+    # window required by the frozen contract.
+    scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     __table_args__ = (
         UniqueConstraint("match_id", "user_id"),
         CheckConstraint("(home_score IS NULL AND away_score IS NULL) OR (home_score >= 0 AND away_score >= 0)"),
