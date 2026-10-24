@@ -1,25 +1,19 @@
 /**
- * Community rooms route (FE-07, gate G2) — FE-01 shell only.
- *
- * The route exists, is directly linkable and reload-safe. The screen itself is
- * delivered by FE-07; nothing is fabricated here in the meantime.
+ * Community (FE-07). Global room discovery, independent of a favourite club.
  */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { CommunityScreen } from "@/components/community/CommunityScreen";
 
 export const metadata = { title: "Community" };
 
-export default function Page() {
+export default function CommunityPage() {
   return (
     <>
-      <PageHeading title="Community rooms" />
-      <PlannedSurface
-        task="FE-07"
-        gate="G2"
-        title="Community rooms"
-        summary="Per-match discussion rooms. Free accounts can post in existing rooms; premium accounts can create them. Permissions, cutoffs and moderation are all backend-authoritative."
-        needs={["GET /rooms", "GET /rooms/{id}/changes"]}
+      <PageHeading
+        title="Community"
+        description="Per-match discussion rooms. Anyone can read; a free account can post in any open room, and premium accounts can create new ones."
       />
+      <CommunityScreen />
     </>
   );
 }

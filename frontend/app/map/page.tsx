@@ -1,25 +1,22 @@
 /**
- * Stadium map route (FE-05, gate G2) — FE-01 shell only.
+ * Stadium map (FE-05).
  *
- * The route exists, is directly linkable and reload-safe. The screen itself is
- * delivered by FE-05; nothing is fabricated here in the meantime.
+ * Verified coordinates only. Fixtures without a mappable venue are listed as
+ * `Location unavailable` rather than being given a guessed position.
  */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { StadiumMapScreen } from "@/components/map/StadiumMapScreen";
 
 export const metadata = { title: "Map" };
 
-export default function Page() {
+export default function MapPage() {
   return (
     <>
-      <PageHeading title="Stadium map" />
-      <PlannedSurface
-        task="FE-05"
-        gate="G2"
-        title="England stadium discovery"
-        summary="An England map of stadiums for the season's fixtures, with verified coordinates only. Fixtures whose venue has no verified location are listed as unmapped rather than being placed at a guessed point."
-        needs={["GET /venues", "GET /matches"]}
+      <PageHeading
+        title="Stadium map"
+        description="Where this round is being played. Stadium colour comes from the server's own aggregate state, so it stays correct even with the demo clock frozen."
       />
+      <StadiumMapScreen />
     </>
   );
 }

@@ -1,14 +1,12 @@
 /**
- * Journey — the main page (FE-01 shell).
+ * Journey — the main page (FE-03).
  *
- * `/` is the Journey, never the map. The winding match path with one node per
- * match arrives in FE-03 and needs `GET /journey`, which the frozen BE-00
- * manifest does not yet determine (gaps G1/G2 in FE00_HANDOFF). Until then this
- * route presents the real design system and states what is missing, rather than
- * rendering invented fixtures.
+ * `/` is the Journey, never the map. The path itself is a client component
+ * because it depends on the session, the server clock and the viewer's
+ * favourite club; the legend below it stays server-rendered.
  */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { JourneyScreen } from "@/components/journey/JourneyScreen";
 import { DesignLegend } from "@/components/ui/DesignLegend";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { dataMode } from "@/lib/demo/mode";
@@ -27,15 +25,17 @@ export default function JourneyPage() {
         {mode === "DEMO_FIXTURES" ? <SourceBadge kind="DEMO_SYNTHETIC" /> : null}
       </PageHeading>
 
-      <div className="space-y-8">
-        <PlannedSurface
-          task="FE-03"
-          title="Winding match path"
-          summary="A vertical, mobile-first match path centred on your next upcoming fixture, with past and future matches, null-safe scores, an All / League / Cup filter and keyboard-navigable nodes linking to each match."
-          needs={["GET /journey?team_id&season", "GET /teams?competition=PL"]}
-        />
+      <div className="space-y-10">
+        <JourneyScreen />
 
-        <DesignLegend />
+        <details className="rounded-lg border border-line bg-surface-raised p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-ink">
+            Status and competition legend
+          </summary>
+          <div className="mt-4">
+            <DesignLegend />
+          </div>
+        </details>
       </div>
     </>
   );

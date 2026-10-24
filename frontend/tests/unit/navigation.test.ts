@@ -17,9 +17,10 @@ describe("NAV_ITEMS", () => {
     expect(map?.href).toBe("/map");
   });
 
-  it("exposes the five primary destinations the spec names", () => {
+  it("exposes the primary destinations the spec names, plus all-matches browse", () => {
     expect(NAV_ITEMS.map((item) => item.label)).toEqual([
       "Journey",
+      "All matches",
       "Map",
       "My Team Impact",
       "Community",

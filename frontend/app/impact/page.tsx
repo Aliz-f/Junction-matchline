@@ -1,25 +1,23 @@
 /**
- * My Team Impact route (FE-06, gate G2) — FE-01 shell only.
+ * My Team Impact (FE-06).
  *
- * The route exists, is directly linkable and reload-safe. The screen itself is
- * delivered by FE-06; nothing is fabricated here in the meantime.
+ * How other results move your club's points gap, plus the current table. The
+ * two are kept visually separate so a historical calculation is never read as
+ * the live standings.
  */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { ImpactScreen } from "@/components/impact/ImpactScreen";
 
-export const metadata = { title: "Impact" };
+export const metadata = { title: "My Team Impact" };
 
-export default function Page() {
+export default function ImpactPage() {
   return (
     <>
-      <PageHeading title="My Team Impact" />
-      <PlannedSurface
-        task="FE-06"
-        gate="G2"
-        title="Favourite-team impact and standings"
-        summary="How each result moved your club: standings position, points, and the matches that mattered. A favourite club prioritises information and never hides other teams' fixtures."
-        needs={["GET /impact?team_id", "GET /standings"]}
+      <PageHeading
+        title="My Team Impact"
+        description="What other results mean for your club. Every figure comes from the server; nothing is recalculated here, and an effect that cannot be verified is labelled rather than guessed."
       />
+      <ImpactScreen />
     </>
   );
 }

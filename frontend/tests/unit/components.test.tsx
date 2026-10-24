@@ -11,7 +11,6 @@ import { MatchStatus } from "@/lib/api/contract";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
 import { CompetitionBadge } from "@/components/ui/CompetitionBadge";
 import { DemoAiBadge, SourceBadge, StaleSourceBanner } from "@/components/ui/SourceBadge";
-import { AuthFormShell } from "@/components/ui/AuthFormShell";
 import { NotInFeed } from "@/components/ui/States";
 
 describe("StatusIndicator", () => {
@@ -84,26 +83,5 @@ describe("NotInFeed", () => {
   it("states data is unavailable rather than inventing analysis", () => {
     render(<NotInFeed what="Player-level statistics are not provided for this match." />);
     expect(screen.getByText("Not available in this feed.")).toBeInTheDocument();
-  });
-});
-
-describe("AuthFormShell", () => {
-  it("disables every control, so nothing can imply a signed-in state", () => {
-    render(<AuthFormShell kind="login" />);
-    expect(screen.getByLabelText("Email")).toBeDisabled();
-    expect(screen.getByLabelText("Password")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
-  });
-
-  it("gives every field a real associated label", () => {
-    render(<AuthFormShell kind="register" />);
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Display name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Password")).toBeInTheDocument();
-  });
-
-  it("explains why the form is inert instead of failing silently", () => {
-    render(<AuthFormShell kind="login" />);
-    expect(screen.getByRole("note").textContent).toContain("Not active yet");
   });
 });
