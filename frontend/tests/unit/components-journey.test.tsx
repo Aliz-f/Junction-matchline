@@ -8,7 +8,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MatchNode } from "@/components/journey/MatchNode";
+import { JourneyNode } from "@/components/journey/JourneyNode";
 import { CompetitionFilter } from "@/components/journey/CompetitionFilter";
 import { TeamPicker } from "@/components/team/TeamPicker";
 import { demoMatches } from "@/lib/demo/responses";
@@ -22,12 +22,12 @@ const byStatus = (status: string): MatchSummary => matches.find((m) => m.status 
 function renderNode(match: MatchSummary, teamId: string | null = ARSENAL) {
   return render(
     <ul>
-      <MatchNode match={match} teamId={teamId} isNext={false} side="left" />
+      <JourneyNode match={match} teamId={teamId} isNext={false} side="left" />
     </ul>,
   );
 }
 
-describe("MatchNode score display", () => {
+describe("JourneyNode score display", () => {
   it("shows a real score for a finished match", () => {
     const match = byStatus("FINISHED");
     const { container } = renderNode(match);
@@ -35,23 +35,27 @@ describe("MatchNode score display", () => {
     // the rendered text rather than a single text node.
     const score = container.querySelector(".tabular-nums");
     expect(score?.textContent?.replace(/\s/g, "")).toBe(`${match.score.home}\u2013${match.score.away}`);
-    expect(screen.queryByLabelText("No score")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: new RegExp(`score ${match.score.home}`) }),
+    ).toBeInTheDocument();
   });
 
-  it("shows a dash, not 0–0, for a scheduled match", () => {
+  it("never shows 0–0 for a scheduled match, and says so in the accessible name", () => {
     renderNode(byStatus("SCHEDULED"));
-    expect(screen.getByLabelText("No score")).toBeInTheDocument();
-    expect(screen.queryByText("0")).toBeNull();
+    // The accessible name is what conveys "no score" on the board.
+    expect(screen.getByRole("link", { name: /no score/i })).toBeInTheDocument();
+    expect(screen.getByText("Scheduled")).toBeInTheDocument();
+    expect(screen.queryByText("0–0")).toBeNull();
   });
 
   it("shows no result for a postponed match", () => {
     renderNode(byStatus("POSTPONED"));
-    expect(screen.getByLabelText("No score")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /no score/i })).toBeInTheDocument();
     expect(screen.getByText("Postponed")).toBeInTheDocument();
   });
 });
 
-describe("MatchNode actions follow backend features", () => {
+describe("JourneyNode actions follow backend features", () => {
   it("offers Predict only when predictions_open is true", () => {
     const open = matches.find((m) => m.features.predictions_open)!;
     renderNode(open);
@@ -78,7 +82,7 @@ describe("MatchNode actions follow backend features", () => {
   });
 });
 
-describe("MatchNode framing and linking", () => {
+describe("JourneyNode framing and linking", () => {
   it("links to the match using the same UUID the API returned", () => {
     const match = byStatus("FINISHED");
     renderNode(match);

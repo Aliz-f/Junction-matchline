@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { JourneyResponse, MatchDetail, MatchSummary } from "@/lib/api/contract";
 import { manifest } from "@/mocks/fixtures";
 import { demoJourney, demoMatchDetail, demoMatches } from "@/lib/demo/responses";
-import { nextUpcomingId } from "@/components/journey/JourneyPath";
+import { nextUpcomingId, nodePosition, trailPath } from "@/components/journey/JourneyPath";
 
 const ARSENAL = manifest.teams[0]!.id;
 
@@ -151,5 +151,40 @@ describe("demoMatches and demoMatchDetail", () => {
   it("carries the manifest's own data capabilities", () => {
     const fixture = manifest.fixtures[2]!;
     expect(demoMatchDetail(fixture.id)!.data_capabilities).toEqual(fixture.capabilities);
+  });
+});
+
+describe("board geometry", () => {
+  it("winds centre -> right -> centre -> left, so the trail reads as a route", () => {
+    const xs = [0, 1, 2, 3, 4].map((i) => Math.round(nodePosition(i).xPercent));
+    expect(xs).toEqual([50, 76, 50, 24, 50]);
+  });
+
+  it("keeps every node inside the board width", () => {
+    for (let i = 0; i < 40; i += 1) {
+      const { xPercent } = nodePosition(i);
+      expect(xPercent).toBeGreaterThanOrEqual(20);
+      expect(xPercent).toBeLessThanOrEqual(80);
+    }
+  });
+
+  it("spaces nodes evenly down the page", () => {
+    const gaps = [1, 2, 3, 4].map((i) => nodePosition(i).yPx - nodePosition(i - 1).yPx);
+    expect(new Set(gaps).size).toBe(1);
+  });
+
+  it("builds a trail joining every node centre", () => {
+    const path = trailPath(4);
+    expect(path.startsWith("M ")).toBe(true);
+    // One cubic segment between each consecutive pair.
+    expect(path.match(/C /g)).toHaveLength(3);
+    for (const i of [1, 2, 3]) {
+      expect(path).toContain(String(nodePosition(i).yPx));
+    }
+  });
+
+  it("handles a single fixture and an empty season without throwing", () => {
+    expect(trailPath(1)).toBe("M 50 75");
+    expect(trailPath(0)).toBe("");
   });
 });
