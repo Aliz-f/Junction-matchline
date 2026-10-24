@@ -15,7 +15,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMatchdays, useMeta, useSession, useStadiumMap } from "@/lib/api/hooks";
 import { readGuestFavorite } from "@/lib/favorite-team";
@@ -23,14 +22,9 @@ import { ApiError } from "@/lib/api/client";
 import { EmptyState, ErrorState, SkeletonList } from "@/components/ui/States";
 import { SourceBadge, StaleSourceBanner } from "@/components/ui/SourceBadge";
 import { ILLUMINATION_TOKENS } from "@/lib/design/illumination";
+import { EnglandMap } from "./EnglandMap";
 import { VenueList } from "./VenueList";
 import { formatDate } from "@/lib/time";
-
-// Leaflet touches `window` at module scope, so it must not be server-rendered.
-const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
-  ssr: false,
-  loading: () => <div className="h-[22rem] w-full animate-pulse rounded-lg bg-surface-sunken" />,
-});
 
 type Selector = { date: string | null; matchday: number | null };
 
@@ -218,10 +212,11 @@ export function StadiumMapScreen() {
             />
           ) : null}
 
-          <LeafletMap
+          <EnglandMap
             stadiums={map.data.stadiums}
             favoriteTeamId={favoriteTeamId}
             onSelect={setHighlight}
+            selectedVenueId={highlight}
           />
 
           <VenueList
