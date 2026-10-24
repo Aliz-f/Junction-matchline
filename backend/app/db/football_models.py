@@ -170,7 +170,17 @@ class PredictionRecord(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     status: Mapped[str] = mapped_column(String(16), default="PENDING")
     points: Mapped[int | None]
-    __table_args__ = (UniqueConstraint("match_id", "user_id"), CheckConstraint("(home_score IS NULL AND away_score IS NULL) OR (home_score >= 0 AND away_score >= 0)"),)
+    __table_args__ = (
+        UniqueConstraint("match_id", "user_id"),
+        CheckConstraint("(home_score IS NULL AND away_score IS NULL) OR (home_score >= 0 AND away_score >= 0)"),
+        CheckConstraint(
+            "(home_score IS NULL AND away_score IS NULL) OR "
+            "(outcome = 'HOME' AND home_score > away_score) OR "
+            "(outcome = 'DRAW' AND home_score = away_score) OR "
+            "(outcome = 'AWAY' AND home_score < away_score)",
+            name="ck_predictions_score_direction",
+        ),
+    )
 
 
 class PredictionRevision(Base):

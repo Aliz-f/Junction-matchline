@@ -54,6 +54,8 @@ def manifest() -> dict[str, Any]:
 
 
 def iso_z(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 

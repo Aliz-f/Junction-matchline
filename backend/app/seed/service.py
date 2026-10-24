@@ -7,7 +7,27 @@ from uuid import uuid5, NAMESPACE_URL
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.football_models import Competition, Match, MatchEventRecord, RuntimeState, Season, SeasonTeamHomeVenue, StandingsSnapshot, Team, Venue
+from app.db.football_models import (
+    AuditRecord,
+    Competition,
+    Match,
+    MatchEventRecord,
+    PredictionRecord,
+    PredictionRequestRecord,
+    PredictionRevision,
+    ProviderSyncRun,
+    ReportRecord,
+    RoomChangeEvent,
+    RoomMessageRecord,
+    RoomRecord,
+    RuntimeState,
+    Season,
+    SeasonTeamHomeVenue,
+    StandingsSnapshot,
+    Team,
+    Venue,
+    WhatifThreadRecord,
+)
 from app.seed.loader import load_demo_manifest
 
 
@@ -16,8 +36,20 @@ def utc(value: str) -> datetime:
 
 
 async def seed_demo(session: AsyncSession) -> None:
-    """Idempotently replace football/demo runtime rows from the frozen manifest."""
+    """Idempotently replace the BE-02 demo-domain rows from the frozen manifest."""
     manifest = load_demo_manifest()
+    # Delete children first: PostgreSQL correctly enforces that a baseline reset
+    # cannot leave audit/replay rows attached to replaced synthetic fixtures.
+    await session.execute(delete(ReportRecord))
+    await session.execute(delete(WhatifThreadRecord))
+    await session.execute(delete(RoomMessageRecord))
+    await session.execute(delete(RoomChangeEvent))
+    await session.execute(delete(RoomRecord))
+    await session.execute(delete(PredictionRevision))
+    await session.execute(delete(PredictionRequestRecord))
+    await session.execute(delete(PredictionRecord))
+    await session.execute(delete(AuditRecord))
+    await session.execute(delete(ProviderSyncRun))
     await session.execute(delete(SeasonTeamHomeVenue))
     await session.execute(delete(StandingsSnapshot))
     await session.execute(delete(MatchEventRecord))
@@ -43,6 +75,16 @@ async def seed_demo(session: AsyncSession) -> None:
     for snapshot in manifest["snapshots"]:
         scenario = manifest["scenarios"][snapshot["key"]]
         session.add(StandingsSnapshot(id=snapshot["id"], competition_id=competition["id"], season_id=season_id, effective_at=utc(scenario["server_now_utc"]), source_version=snapshot["key"], table_json=[], is_official=False))
+    for room in manifest["rooms"]:
+        session.add(
+            RoomRecord(
+                id=room["id"],
+                match_id=room["match_id"],
+                kind=room["kind"],
+                title=f"System {room['kind']} room",
+                status="OPEN",
+            )
+        )
     state = await session.get(RuntimeState, 1)
     if state is None:
         session.add(RuntimeState(id=1, mode="DEMO", demo_clock_utc=utc(manifest["demo_clock"]), demo_epoch=1, scenario_name="baseline", scenario_revision=1))
