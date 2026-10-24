@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.db.football_models import Match, PredictionRecord, RuntimeState
+from app.db.football_models import Match, PredictionRecord, RoomRecord, RuntimeState
 from app.db.models import Base, SessionRecord, UserRecord
 from app.jobs.demo_transition import apply_scenario_to_session
 from app.seed.loader import load_demo_manifest
@@ -82,6 +82,26 @@ async def test_clock_change_never_changes_match_status(database_session: AsyncSe
     await database_session.commit()
     await database_session.refresh(fixture)
     assert before == fixture.status == "SCHEDULED"
+
+
+@pytest.mark.asyncio
+async def test_finished_transition_activates_post_match_room_template(database_session: AsyncSession) -> None:
+    await seed_demo(database_session)
+    template = RoomRecord(
+        id="70000000-0000-4000-8000-000000000099",
+        match_id="30000000-0000-4000-8000-000000000001",
+        kind="POST_MATCH",
+        title="Future post-match template",
+        status="HIDDEN",
+    )
+    database_session.add(template)
+    await database_session.commit()
+
+    await apply_scenario_to_session(database_session, "upcoming_live")
+    await apply_scenario_to_session(database_session, "upcoming_finished")
+    await database_session.commit()
+    await database_session.refresh(template)
+    assert template.status == "OPEN"
 
 
 @pytest.mark.asyncio

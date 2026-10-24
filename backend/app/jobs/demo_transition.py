@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.db.football_models import Match, RuntimeState
+from app.db.football_models import Match, RoomRecord, RuntimeState
 from app.db.session import configure_database
 from app.seed.demo_accounts import seed_demo_accounts
 from app.seed.loader import load_demo_manifest, scenario_data
@@ -55,6 +55,16 @@ async def apply_scenario_to_session(
         match.status = change["status"]
         match.home_score, match.away_score = change["score"]["home"], change["score"]["away"]
         transitioned_match_ids.append(fixture_id)
+        if change["status"] == "FINISHED":
+            templates = await session.scalars(
+                select(RoomRecord).where(
+                    RoomRecord.match_id == fixture_id,
+                    RoomRecord.kind == "POST_MATCH",
+                    RoomRecord.status == "HIDDEN",
+                )
+            )
+            for room in templates:
+                room.status = "OPEN"
     await hook.after_transition(session, name, transitioned_match_ids)
 
 

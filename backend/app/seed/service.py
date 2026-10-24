@@ -90,14 +90,18 @@ async def seed_demo(session: AsyncSession, *, commit: bool = True) -> None:
     for snapshot in manifest["snapshots"]:
         scenario = manifest["scenarios"][snapshot["key"]]
         session.add(StandingsSnapshot(id=snapshot["id"], competition_id=competition["id"], season_id=season_id, effective_at=utc(scenario["server_now_utc"]), source_version=snapshot["key"], table_json=[], is_official=False))
+    fixture_statuses = {fixture["id"]: fixture["status"] for fixture in manifest["fixtures"]}
     for room in manifest["rooms"]:
+        status = "OPEN"
+        if room["kind"] == "POST_MATCH" and fixture_statuses[room["match_id"]] != "FINISHED":
+            status = "HIDDEN"
         session.add(
             RoomRecord(
                 id=room["id"],
                 match_id=room["match_id"],
                 kind=room["kind"],
                 title=f"System {room['kind']} room",
-                status="OPEN",
+                status=status,
             )
         )
     state = await session.get(RuntimeState, 1)
