@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.football_models import (
-    AuditRecord,
     AiDailyQuotaRecord,
+    AuditRecord,
     Competition,
     Match,
     MatchEventRecord,
@@ -32,6 +32,7 @@ from app.db.football_models import (
     WhatifRequestRecord,
     WhatifThreadRecord,
 )
+from app.db.models import SessionRecord, UserRecord
 from app.seed.loader import load_demo_manifest
 
 
@@ -39,7 +40,7 @@ def utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-async def seed_demo(session: AsyncSession) -> None:
+async def seed_demo(session: AsyncSession, *, commit: bool = True) -> None:
     """Idempotently replace the BE-02 demo-domain rows from the frozen manifest."""
     manifest = load_demo_manifest()
     # Delete children first: PostgreSQL correctly enforces that a baseline reset
@@ -58,6 +59,10 @@ async def seed_demo(session: AsyncSession) -> None:
     await session.execute(delete(PredictionRecord))
     await session.execute(delete(AuditRecord))
     await session.execute(delete(ProviderSyncRun))
+    # Demo baseline invalidates every demo login. The protected transition CLI
+    # recreates credentials separately from ignored local/CI secret inputs.
+    await session.execute(delete(SessionRecord))
+    await session.execute(delete(UserRecord))
     await session.execute(delete(SeasonTeamHomeVenue))
     await session.execute(delete(StandingsSnapshot))
     await session.execute(delete(MatchEventRecord))
@@ -100,4 +105,7 @@ async def seed_demo(session: AsyncSession) -> None:
         state.demo_clock_utc = utc(manifest["demo_clock"])
         state.demo_epoch += 1
         state.scenario_name, state.scenario_revision = "baseline", state.scenario_revision + 1
-    await session.commit()
+    if commit:
+        await session.commit()
+    else:
+        await session.flush()

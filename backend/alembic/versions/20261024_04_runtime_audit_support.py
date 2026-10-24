@@ -1,5 +1,6 @@
 """Add BE-02 standings, room-change, and provider audit support."""
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20261024_04"

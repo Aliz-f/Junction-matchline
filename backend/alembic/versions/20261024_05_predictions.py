@@ -1,5 +1,6 @@
 """Add BE-02 prediction persistence and immutable replay audit tables."""
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20261024_05"

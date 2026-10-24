@@ -1,5 +1,6 @@
 """Add verified season home-venue associations."""
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20261024_03"

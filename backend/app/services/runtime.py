@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.football_models import RuntimeState
 
@@ -12,7 +12,7 @@ from app.db.football_models import RuntimeState
 async def runtime_state(session: AsyncSession, fallback: datetime) -> tuple[datetime, int | None, int | None]:
     try:
         state = await session.get(RuntimeState, 1)
-    except SQLAlchemyError:
+    except (ConnectionError, OSError, SQLAlchemyError):
         # Contract-only and first-run local harnesses may not have run Alembic.
         # They use the configured immutable fallback; seeded deployments never do.
         return fallback.astimezone(UTC), None, None

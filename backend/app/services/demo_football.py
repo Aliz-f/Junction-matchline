@@ -7,7 +7,7 @@ clock or mutating the immutable demo manifest.
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -15,7 +15,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.football_models import Competition, Match, MatchEventRecord, Season, SeasonTeamHomeVenue, Team, Venue
+from app.db.football_models import (
+    Competition,
+    Match,
+    MatchEventRecord,
+    Season,
+    SeasonTeamHomeVenue,
+    Team,
+    Venue,
+)
 from app.schemas.contract import (
     CompetitionSummary,
     MatchFeatures,
@@ -33,6 +41,14 @@ from app.schemas.contract import (
 from app.seed.loader import load_demo_manifest
 
 LONDON = ZoneInfo("Europe/London")
+IlluminationState = Literal[
+    "UPCOMING_ROUND",
+    "LIVE",
+    "COMPLETED",
+    "INACTIVE",
+    "POSTPONED_OR_CANCELLED",
+    "UNKNOWN",
+]
 
 
 def source() -> SourceView:
@@ -216,7 +232,9 @@ def summary(fixture: dict[str, Any], data: dict[str, Any] | None = None) -> Matc
     )
 
 
-def illumination_state(fixtures: list[dict[str, Any]], *, server_now_utc: datetime) -> str:
+def illumination_state(
+    fixtures: list[dict[str, Any]], *, server_now_utc: datetime
+) -> IlluminationState:
     """Return a venue state from explicit fixture states, never from the clock alone."""
     if not fixtures:
         return "INACTIVE"

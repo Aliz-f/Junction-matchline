@@ -28,10 +28,8 @@ from app.core.errors import (
     validation_error_handler,
 )
 from app.core.logging import SecretRedactionFilter
-from app.db.session import configure_database
-from app.db.session import get_session
+from app.db.session import configure_database, get_session
 from app.providers.demo import DemoSportsDataProvider
-from app.services.runtime import runtime_state
 from app.schemas.contract import (
     CompetitionsResponse,
     CompetitionSummary,
@@ -49,6 +47,8 @@ from app.schemas.contract import (
     WhatifMessageRequest,
     WhatifThreadRequest,
 )
+from app.services.demo_football import persisted_manifest
+from app.services.runtime import runtime_state
 
 ERRORS: dict[int | str, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
@@ -110,12 +110,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     provider = DemoSportsDataProvider()
 
-    async def season_data() -> dict[str, object]:
-        return await provider.normalized_season("PL", 2026)
+    async def season_data(session: AsyncSession) -> dict[str, Any]:
+        return await persisted_manifest(session) or await provider.normalized_season("PL", 2026)
 
     @app.get("/api/v1/competitions", response_model=CompetitionsResponse, responses=ERRORS)
-    async def competitions() -> CompetitionsResponse:
-        data = await season_data()
+    async def competitions(session: AsyncSession = Depends(get_session)) -> CompetitionsResponse:
+        data = await season_data(session)
         competition = data["competition"]
         assert isinstance(competition, dict)
         return CompetitionsResponse(
@@ -131,8 +131,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.get("/api/v1/teams", response_model=TeamsResponse, responses=ERRORS)
-    async def teams(competition: str = Query(...)) -> TeamsResponse:
-        data = await season_data()
+    async def teams(
+        competition: str = Query(...), session: AsyncSession = Depends(get_session)
+    ) -> TeamsResponse:
+        data = await season_data(session)
         competition_data = data["competition"]
         assert isinstance(competition_data, dict)
         if competition != competition_data["code"]:
@@ -142,8 +144,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return TeamsResponse(items=sorted((TeamSummary(crest_url=None, **team) for team in raw_teams), key=lambda team: team.name))
 
     @app.get("/api/v1/competitions/{code}/matchdays", response_model=MatchdaysResponse, responses=ERRORS)
-    async def matchdays(code: str, season: int = Query(...)) -> MatchdaysResponse:
-        data = await season_data()
+    async def matchdays(
+        code: str, season: int = Query(...), session: AsyncSession = Depends(get_session)
+    ) -> MatchdaysResponse:
+        data = await season_data(session)
         competition_data = data["competition"]
         assert isinstance(competition_data, dict)
         if code != competition_data["code"] or season != competition_data["season_start_year"]:

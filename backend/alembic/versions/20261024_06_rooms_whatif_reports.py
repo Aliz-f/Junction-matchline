@@ -1,5 +1,6 @@
 """Add BE-02 room, private-thread, and report persistence."""
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20261024_06"
