@@ -7,6 +7,7 @@
 import type { Metadata, Viewport } from "next";
 import { loadMeta } from "@/lib/demo/mode";
 import { AppShell } from "@/components/layout/AppShell";
+import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,9 +33,11 @@ export default async function RootLayout({ children }: { readonly children: Reac
   return (
     <html lang="en-GB">
       <body className="font-sans">
-        <AppShell mode={mode} meta={meta}>
-          {children}
-        </AppShell>
+        <Providers>
+          <AppShell mode={mode} meta={meta}>
+            {children}
+          </AppShell>
+        </Providers>
       </body>
     </html>
   );

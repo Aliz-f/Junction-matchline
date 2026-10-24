@@ -111,6 +111,13 @@ const NAV_PATHS = {
       <circle cx="9" cy="6" r="1.4" fill="currentColor" stroke="none" />
     </>
   ),
+  matches: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 13h8M8 16h5" />
+    </>
+  ),
   map: (
     <>
       <path d="M12 21s6-5.3 6-10a6 6 0 10-12 0c0 4.7 6 10 6 10z" />

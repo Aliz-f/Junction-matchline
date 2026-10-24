@@ -1,25 +1,20 @@
 /**
- * Profile route (FE-08, gate G3) — FE-01 shell only.
- *
- * The route exists, is directly linkable and reload-safe. The screen itself is
- * delivered by FE-08; nothing is fabricated here in the meantime.
+ * Profile (FE-08, G3). Prediction history and badges only; the private
+ * What-if thread list arrives with FE-09 at G4.
  */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { ProfileScreen } from "@/components/profile/ProfileScreen";
 
 export const metadata = { title: "Profile" };
 
-export default function Page() {
+export default function ProfilePage() {
   return (
     <>
-      <PageHeading title="Profile" />
-      <PlannedSurface
-        task="FE-08"
-        gate="G3"
-        title="Prediction history and badges"
-        summary="Your prediction history, settled scores and earned badges. Changing your favourite club never clears this history."
-        needs={["GET /users/me", "GET /users/me/predictions", "GET /users/me/badges"]}
+      <PageHeading
+        title="Profile"
+        description="Your favourite club, prediction history and badges. Private to you."
       />
+      <ProfileScreen />
     </>
   );
 }

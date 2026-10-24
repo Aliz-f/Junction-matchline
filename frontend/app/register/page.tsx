@@ -1,14 +1,23 @@
-/** Create account (FE-02 wires the session) — FE-01 shell only. */
+/** Create account (FE-02). */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { AuthFormShell } from "@/components/ui/AuthFormShell";
+import { AuthForm } from "@/components/ui/AuthForm";
 
 export const metadata = { title: "Create account" };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const next = (await searchParams).next;
+
   return (
     <>
-      <PageHeading title="Create account" description="Free accounts can join and post in existing community rooms." />
-      <AuthFormShell kind="register" />
+      <PageHeading
+        title="Create account"
+        description="Free accounts can join and post in existing community rooms."
+      />
+      <AuthForm kind="register" next={Array.isArray(next) ? (next[0] ?? null) : (next ?? null)} />
     </>
   );
 }

@@ -89,4 +89,6 @@ FE-00 and FE-01 are built against mocks, and FE-01 is additionally part-verified
 against the real BE-01 backend. **G0 is still BLOCKED** on the backend
 items in [FE00_HANDOFF.md](FE00_HANDOFF.md); mocked work may continue while a
 gate is blocked, but no integrated status is PASS until the real backend is
-verified. See [FE01_HANDOFF.md](FE01_HANDOFF.md).
+verified. See [FE01_HANDOFF.md](FE01_HANDOFF.md) for gate evidence and
+[INTEGRATION_BACKLOG.md](INTEGRATION_BACKLOG.md) for what is left on each
+frontend task, split by whether it needs the backend.

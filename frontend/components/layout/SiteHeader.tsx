@@ -1,12 +1,12 @@
 /**
  * App header (FE-01).
  *
- * Renders brand, primary navigation and the demo/server clock indicator.
- * Auth controls link to the real `/login` and `/register` routes; no control
- * here is decorative (FE-01 no-op prevention).
+ * Renders brand, primary navigation, the demo/server clock indicator and the
+ * session controls. Nothing here is decorative (FE-01 no-op prevention).
  */
 import Link from "next/link";
 import { PrimaryNav } from "./PrimaryNav";
+import { SessionControls } from "./SessionControls";
 import { DemoClockNotice } from "./DemoClockNotice";
 import type { MetaView } from "@/lib/api/types";
 import type { DataMode } from "@/lib/demo/mode";
@@ -23,20 +23,7 @@ export function SiteHeader({ mode, meta }: Props) {
             <span className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Phase 1</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:bg-surface-sunken"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-md bg-ink px-3 py-1.5 text-sm font-semibold text-surface-raised hover:opacity-90"
-            >
-              Create account
-            </Link>
-          </div>
+          <SessionControls />
         </div>
 
         <DemoClockNotice mode={mode} meta={meta} />
