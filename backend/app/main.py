@@ -31,8 +31,6 @@ from app.schemas.contract import (
     CompetitionSummary,
     CompetitionsResponse,
     ErrorEnvelope,
-    FavoriteRequest,
-    FavoriteResponse,
     HealthResponse,
     MetaCapabilities,
     MetaView,
