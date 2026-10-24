@@ -4,9 +4,12 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.api.v1.impact import cursor_value, parse_cursor
 from app.core.config import Settings
+from app.core.errors import ApiError
 from app.main import create_app
 from app.services.demo_football import manifest
 from app.services.impact import impact_insight
@@ -121,6 +124,39 @@ def test_finished_has_one_confirmed_and_two_hypothetical_scenarios() -> None:
     )
     assert len(insight.scenarios) == 3
     assert sum(not scenario.is_hypothetical for scenario in insight.scenarios) == 1
+
+
+def test_finished_score_without_post_snapshot_has_no_confirmed_scenario() -> None:
+    fixture, data, favorite = fixture_and_data()
+    fixture["status"] = "FINISHED"
+    fixture["score"] = {"home": 2, "away": 1}
+    rows = [
+        row(favorite, 20, 2),
+        row(fixture["home_team_id"], 17, 3),
+        row(fixture["away_team_id"], 14, 4),
+    ]
+    insight = impact_insight(fixture, data, favorite, rows)
+    assert insight.actual_outcome == "HOME"
+    assert insight.relevance == "UNKNOWN"
+    assert insight.scenarios == []
+
+
+def test_confirmed_effect_uses_observed_post_match_standings() -> None:
+    fixture, data, favorite = fixture_and_data()
+    fixture["status"] = "FINISHED"
+    fixture["score"] = {"home": 2, "away": 1}
+    pre = [row(favorite, 20, 2), row(fixture["home_team_id"], 17, 3), row(fixture["away_team_id"], 14, 4)]
+    post = [row(favorite, 20, 2), row(fixture["home_team_id"], 20, 3), row(fixture["away_team_id"], 14, 4)]
+    insight = impact_insight(fixture, data, favorite, pre, post_raw_rows=post)
+    confirmed = next(item for item in insight.scenarios if not item.is_hypothetical)
+    assert [effect.gap_after for effect in confirmed.effects] == [0, 6]
+
+
+def test_impact_cursor_rejects_changed_snapshot_version() -> None:
+    fixture, _, favorite = fixture_and_data()
+    cursor = cursor_value(favorite, "PL", 2026, 11, None, "a:baseline", fixture)
+    with pytest.raises(ApiError):
+        parse_cursor(cursor, favorite, "PL", 2026, 11, None, "a:changed")
 
 
 def test_http_impact_is_truthful_when_the_frozen_demo_has_no_standings_rows() -> None:
