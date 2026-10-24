@@ -203,21 +203,27 @@ quota slot.
 
 ## FE-09 — private What-if AI · G4
 
-Status: **not started.**
+Status: **attempt handling, turn accounting, evidence joining and the full chat
+UI done**; no reachable success path without a session.
+
+The two modules that stop double charging and fabricated citations are complete
+and tested as pure logic: `lib/whatif/attempt.ts` (sessionStorage envelope,
+per-user and per-thread, with the superseded rule) and `lib/whatif/turns.ts`
+(40-turn lifetime accounting, completed-pairs context, ref joining scoped to one
+message).
 
 | | Remaining |
 |---|---|
-| **FE** | Thread selector and multi-turn private chat on finished matches; thread list added to `/profile` at G4 only |
-| **FE** | Typed evidence rendering, refs joined only within the same AI message, unsafe refs shown as unsafe |
-| **FE** | USER vs `AI_ANALYSIS` vs `DEMO_AI` distinction; verdict / reasoning / supports / challenges / assumptions / unknowns / confidence / sources / follow-up |
-| **FE** | Composer 10–2,000 chars, Enter/Shift+Enter, `aria-live` announcement |
-| **FE** | Idempotency across 200 / 202 / 503 / 409 / 429; `sessionStorage` attempt envelope with the original key and byte-identical body; never mint a replacement key |
-| **FE** | Quota display from backend counts only; 40-turn thread limit text including FAILED and PENDING turns |
-| **FE** | Never claim the AI proves a counterfactual; no numerical counterfactual probabilities |
-| **BE** | D7 — all What-if endpoints are 501 stubs |
-| **BE** | D1 — `message` length limits are backend-only, not in Appendix A |
-| **SECRET** | Remote model credentials. **Without them CT-11 is BLOCKED, never PASS** — a scripted `DEMO_AI` reply does not satisfy it |
-| **JOINT** | CT-14, CT-21, CT-22 |
+| **BE** | **B1**, then D7 — every What-if endpoint is a 501 stub, so no thread can exist |
+| **BE** | D1 — `message` length limits (10/2000) are backend-only, not in Appendix A. The composer enforces them; the contract does not state them |
+| **SECRET** | **Remote model credentials.** Without them **CT-11 is BLOCKED, never PASS** — a scripted `DEMO_AI` reply does not satisfy the real-model acceptance test |
+| **FE** | Thread creation (`POST /matches/{id}/whatif/threads`) — the selector lists threads and opens them, but the create control has no reachable state while every call 401s |
+| **FE** | Scroll and focus management in a populated thread |
+| **FE** | 202 PENDING polling is implemented but unexercised: no demo turn can be pending |
+| **JOINT** | CT-14, CT-21, CT-22; the 200/202/503/409/429 matrix; no-double-charge on a released FAILED retry |
+
+Demo mode serves no What-if data at all — it returns 401 for every thread
+endpoint, which is the contract-correct answer for a guest.
 
 ## FE-10 — conformance and release QA · G5
 

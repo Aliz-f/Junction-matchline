@@ -1,19 +1,17 @@
 /**
  * Tab panel contents (FE-04).
  *
- * Overview and Events are real here. Discuss, Predict, Impact and What-if are
- * delivered by FE-07, FE-08, FE-06 and FE-09 respectively, so each states what
- * it will hold and which endpoints it needs — but only when the backend says
- * the section applies to this match, so the tab set itself is already correct.
+ * Every panel is now real: Overview and Events here, and Discuss, Predict,
+ * Impact and What-if delegated to the components FE-07, FE-08, FE-06 and FE-09
+ * own. A panel only renders when the backend says the section applies to this
+ * match, which `matchTabs.ts` decides.
  */
-import Link from "next/link";
 import { EventTimeline } from "./EventTimeline";
-import { PlannedSurface } from "@/components/ui/PlannedSurface";
 import { MatchImpactPanel } from "@/components/impact/MatchImpactPanel";
 import { MatchRoomsPanel } from "@/components/community/MatchRoomsPanel";
 import { PredictionPanel } from "@/components/prediction/PredictionPanel";
+import { WhatifPanel } from "@/components/whatif/WhatifPanel";
 import { NotInFeed } from "@/components/ui/States";
-import { DemoAiBadge } from "@/components/ui/SourceBadge";
 import type { MatchTab } from "./matchTabs";
 import type { MatchDetail } from "@/lib/api/types";
 
@@ -112,31 +110,7 @@ export function MatchTabPanel({ tab, match }: { readonly tab: MatchTab; readonly
       return <MatchImpactPanel matchId={match.id} />;
 
     case "whatif":
-      return (
-        <div className="space-y-3">
-          <p className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-            <DemoAiBadge />
-            <span>
-              Private, multi-turn post-match analysis. Conclusions are reasoned arguments about an
-              alternative scenario — they are never verifiable results.
-            </span>
-          </p>
-          <PlannedSurface
-            task="FE-09"
-            gate="G4"
-            title="Private What-if analysis"
-            summary="Put a hypothesis to the AI and get supporting and conflicting verified evidence back, with its uncertainty stated. Threads are private to you, multi-turn, and never published."
-            needs={["POST /matches/{id}/whatif/threads", "POST /whatif/threads/{id}/messages"]}
-          />
-          <p className="text-xs text-ink-muted">
-            Your threads are listed on your{" "}
-            <Link href="/profile" className="font-semibold text-ink underline">
-              profile
-            </Link>{" "}
-            once FE-09 lands.
-          </p>
-        </div>
-      );
+      return <WhatifPanel match={match} />;
 
     default:
       return null;

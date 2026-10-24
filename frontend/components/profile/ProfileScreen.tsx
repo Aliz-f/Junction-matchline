@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import { useBadges, usePredictionHistory, useProfile, useSession, useTeams } from "@/lib/api/hooks";
+import { useAllWhatifThreads } from "@/lib/whatif/useWhatif";
 import { ApiError } from "@/lib/api/client";
 import { EmptyState, ErrorState, SkeletonList } from "@/components/ui/States";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
@@ -30,6 +31,8 @@ export function ProfileScreen() {
   const badges = useBadges();
   const history = usePredictionHistory();
   const teams = useTeams("PL");
+  // Added by FE-09 at G4; deliberately absent at G3.
+  const threads = useAllWhatifThreads();
 
   if (isLoading) return <SkeletonList rows={4} />;
 
@@ -152,6 +155,49 @@ export function ProfileScreen() {
                     Earned{" "}
                     <time dateTime={machineDateTime(badge.earned_at)}>
                       {formatKickoff(badge.earned_at) ?? badge.earned_at}
+                    </time>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </section>
+
+      <section aria-labelledby="threads-heading">
+        <h2 id="threads-heading" className="text-lg font-bold text-ink">
+          Private What-if threads
+        </h2>
+        <p className="mt-1 max-w-prose text-sm text-ink-muted">
+          Visible only to you. These conversations are never published, shared to community rooms, or
+          exported.
+        </p>
+        {threads.isLoading ? <SkeletonList rows={1} /> : null}
+        {threads.isError ? (
+          <div className="mt-2">
+            <ErrorState
+              title="Could not load your threads"
+              envelope={threads.error instanceof ApiError ? threads.error.envelope : null}
+              onRetry={() => void threads.refetch()}
+            />
+          </div>
+        ) : null}
+        {threads.data ? (
+          threads.data.items.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              No threads yet. Open one from a finished match to ask what might have gone differently.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {threads.data.items.map((thread) => (
+                <li key={thread.id} className="rounded-lg border border-line bg-surface-raised p-3">
+                  <Link href={`/matches/${thread.match_id}?tab=whatif`} className="text-sm font-bold text-ink">
+                    {thread.title}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Updated{" "}
+                    <time dateTime={machineDateTime(thread.updated_at)}>
+                      {formatKickoff(thread.updated_at) ?? thread.updated_at}
                     </time>
                   </p>
                 </li>

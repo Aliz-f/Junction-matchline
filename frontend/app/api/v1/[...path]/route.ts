@@ -71,6 +71,8 @@ function isPrivatePath(path: readonly string[]): boolean {
     return true;
   }
   if (route.startsWith("/whatif/")) return true;
+  // GET /matches/{id}/whatif/threads
+  if (path.length === 4 && path[0] === "matches" && path[2] === "whatif") return true;
   return false;
 }
 
