@@ -182,18 +182,24 @@ burst. Demo rooms are empty, so none of it has run against real messages.
 
 ## FE-08 — predictions, badges, profile · G3
 
-Status: **not started.**
+Status: **form, validation and idempotency done**; no reachable success path
+without a session.
 
 | | Remaining |
 |---|---|
-| **FE** | HOME/DRAW/AWAY plus optional exact score, with the both-null-or-both-valid rule |
-| **FE** | Upsert before cutoff; mandatory UUID `Idempotency-Key`; re-`GET` `/predictions/me` after every write and render that, not the replayed snapshot |
-| **FE** | Scoring breakdown (+3 outcome, +2 exact), explicit VOID |
-| **FE** | Leaderboard, prediction history, badges; **no** What-if list at G3 |
-| **FE** | Cutoff from `locked_at` + `/meta`, never ticking against frozen time |
-| **BE** | D7 — all prediction endpoints are 501 stubs |
-| **BE** | Per-match scored prediction histories (manifest has counts only), so badge boundaries cannot be verified |
-| **JOINT** | CT-18; FREE badge 4/2 → 5/3 on settlement and back to 4/2 on baseline reset |
+| **BE** | **B1** — until authenticated requests work there is no session, so every private path ends at the sign-in prompt. Demo mode correctly returns 401 for all of them |
+| **BE** | D7 — all prediction, badge, profile and leaderboard endpoints are 501 stubs |
+| **BE** | Per-match scored prediction histories. The manifest has baseline counts (PREMIUM 5/3, FREE 4/2) but no per-match records, so badge boundaries cannot be verified |
+| **FE** | Leaderboard component — the hook exists, the UI does not |
+| **FE** | Settled-prediction display (+3 / +2 breakdown, VOID) is implemented but unexercised: no demo prediction can exist to settle |
+| **FE** | History pagination — the first page is rendered, `next_cursor` is not followed yet |
+| **JOINT** | CT-18 against the real backend; 201 vs 200 vs 409 on the key/body matrix; FREE badge 4/2 → 5/3 on settlement and back on baseline reset |
+
+The prediction `Idempotency-Key` attempt is held in memory, not persisted: a
+prediction is cheap to re-enter and a stale key surviving a reload could collide
+with a record the user can no longer see. FE-09's What-if turns are different
+and DO persist an attempt envelope, because re-sending costs a model call and a
+quota slot.
 
 ## FE-09 — private What-if AI · G4
 

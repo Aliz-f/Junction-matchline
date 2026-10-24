@@ -52,6 +52,29 @@ function fail(code: ErrorCode, message: string, details: Record<string, unknown>
 }
 
 /**
+ * Private, session-scoped endpoints.
+ *
+ * Demo mode has no session, so the caller is always a guest and the honest
+ * contract answer is 401 `UNAUTHENTICATED` — not a provider error. This makes
+ * the UI's sign-in-required paths real rather than hypothetical.
+ */
+function requiresSignIn(): NextResponse {
+  return fail("UNAUTHENTICATED", "Sign in to use this feature");
+}
+
+/** True for any path whose response depends on who is asking. */
+function isPrivatePath(path: readonly string[]): boolean {
+  const route = `/${path.join("/")}`;
+  if (route.startsWith("/users/me")) return true;
+  // GET /matches/{id}/predictions/me
+  if (path.length === 4 && path[0] === "matches" && path[2] === "predictions" && path[3] === "me") {
+    return true;
+  }
+  if (route.startsWith("/whatif/")) return true;
+  return false;
+}
+
+/**
  * Endpoints the frozen manifest does not fully determine. Returning a contract
  * error that names the gap is honest; returning invented data would not be.
  */
@@ -158,6 +181,8 @@ export async function GET(
     }
 
     default: {
+      if (isPrivatePath(path)) return requiresSignIn();
+
       // GET /rooms/{id} | /rooms/{id}/messages | /rooms/{id}/changes
       //
       // A HIDDEN template returns the SAME 404 as an unknown id on every one of
@@ -238,7 +263,20 @@ async function refuseWrite(
   context: { params: Promise<{ path?: string[] }> },
 ): Promise<NextResponse> {
   const { path = [] } = await context.params;
-  return notYetAvailable(`/${path.join("/")}`);
+  const route = `/${path.join("/")}`;
+
+  // Everything that mutates user state needs a session, and demo mode has
+  // none. 401 is the contract-correct answer for a guest, so the UI's
+  // sign-in prompts are exercised for real.
+  const needsSession =
+    route.startsWith("/users/me") ||
+    route.startsWith("/whatif/") ||
+    route.startsWith("/reports") ||
+    (path[0] === "matches" && (path[2] === "predictions" || path[2] === "whatif" || path[2] === "rooms")) ||
+    (path[0] === "rooms" && path[2] === "messages");
+
+  if (needsSession) return requiresSignIn();
+  return notYetAvailable(route);
 }
 
 export const POST = refuseWrite;

@@ -74,6 +74,12 @@ type RequestOptions = {
   readonly query?: Readonly<Record<string, string | number | undefined | null>>;
   readonly signal?: AbortSignal;
   /**
+   * Extra headers. Used for the mandatory `Idempotency-Key` on prediction and
+   * What-if writes. No CSRF header is ever added: the backend validates the
+   * browser's ordinary `Origin`.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+  /**
    * Only loosen this for genuinely public, non-user-specific data. Private and
    * room responses must stay `no-store` (CT-12).
    */
@@ -132,14 +138,14 @@ export async function apiRequest<T>(
   schema: { parse: (value: unknown) => T },
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, query, signal, cache = "no-store" } = options;
+  const { method = "GET", body, query, signal, cache = "no-store", headers } = options;
 
   const init: RequestInit = {
     method,
     cache,
     // The session is an HttpOnly cookie, so it must ride along.
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...headers },
     ...(signal ? { signal } : {}),
   };
 

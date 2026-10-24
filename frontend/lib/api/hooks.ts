@@ -11,16 +11,22 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { z } from "zod";
 import {
   AuthUserResponse,
+  BadgeView,
   CompetitionSummary,
+  CurrentPredictionResponse,
   ImpactInsight,
   JourneyResponse,
   MatchDetail,
   MatchSummary,
   MetaView,
+  LeaderboardEntry,
+  PredictionHistoryItem,
+  PredictionView,
   RoomSummary,
   StadiumMapResponse,
   StandingsResponse,
   TeamSummary,
+  UserProfile,
   Uuid,
 } from "./contract";
 import { apiRequest, apiRequestVoid } from "./client";
@@ -43,6 +49,9 @@ const MatchPage = z.object({ items: z.array(MatchSummary), next_cursor: z.string
 const MatchdayList = z.object({ items: z.array(z.number().int()) }).strict();
 const RoomPage = z.object({ items: z.array(RoomSummary), next_cursor: z.string().nullable() }).strict();
 const RoomList = z.object({ items: z.array(RoomSummary) }).strict();
+const BadgeList = z.object({ items: z.array(BadgeView) }).strict();
+const LeaderboardPage = z.object({ items: z.array(LeaderboardEntry), next_cursor: z.string().nullable() }).strict();
+const PredictionHistoryPage = z.object({ items: z.array(PredictionHistoryItem), next_cursor: z.string().nullable() }).strict();
 const ImpactPage = z.object({ items: z.array(ImpactInsight), next_cursor: z.string().nullable() }).strict();
 
 /**
@@ -327,5 +336,94 @@ export function useLogout() {
       queryClient.removeQueries();
       await queryClient.invalidateQueries({ queryKey: userKeys.session() });
     },
+  });
+}
+
+// Predictions, badges and profile (FE-08) ------------------------------------
+
+/**
+ * The caller's own prediction for a match.
+ *
+ * Always `{prediction: null | PredictionView}`, so "no prediction yet" is a
+ * normal response rather than a 404.
+ */
+export function useCurrentPrediction(
+  matchId: string | null,
+): UseQueryResult<z.infer<typeof CurrentPredictionResponse>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.currentPrediction(scope, matchId ?? "none"),
+    enabled: Boolean(matchId),
+    queryFn: () =>
+      apiRequest(`/matches/${matchId}/predictions/me`, CurrentPredictionResponse),
+  });
+}
+
+/**
+ * Submits or edits a prediction.
+ *
+ * The caller supplies the `Idempotency-Key`, because key lifecycle belongs to
+ * the form (same key for a retry, fresh key for an edit) — see
+ * `lib/predictions/idempotency.ts`.
+ *
+ * On settling, the current prediction is invalidated so the component re-reads
+ * the authoritative state instead of trusting a possibly replayed response.
+ */
+export function useSubmitPrediction(matchId: string) {
+  const queryClient = useQueryClient();
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+
+  return useMutation({
+    mutationFn: ({ body, idempotencyKey }: { body: unknown; idempotencyKey: string }) =>
+      apiRequest(`/matches/${matchId}/predictions`, PredictionView, {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": idempotencyKey },
+      }),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: userKeys.currentPrediction(scope, matchId),
+      });
+    },
+  });
+}
+
+export function useLeaderboard(matchId: string | null): UseQueryResult<z.infer<typeof LeaderboardPage>> {
+  return useQuery({
+    queryKey: publicKeys.leaderboard(matchId ?? "none"),
+    enabled: Boolean(matchId),
+    queryFn: () => apiRequest(`/matches/${matchId}/leaderboard`, LeaderboardPage),
+  });
+}
+
+export function useProfile(): UseQueryResult<z.infer<typeof UserProfile>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.profile(scope),
+    enabled: user !== null,
+    queryFn: () => apiRequest("/users/me/profile", UserProfile),
+  });
+}
+
+export function useBadges(): UseQueryResult<z.infer<typeof BadgeList>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.badges(scope),
+    enabled: user !== null,
+    queryFn: () => apiRequest("/users/me/badges", BadgeList),
+  });
+}
+
+export function usePredictionHistory(): UseQueryResult<z.infer<typeof PredictionHistoryPage>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.predictions(scope),
+    enabled: user !== null,
+    queryFn: () => apiRequest("/users/me/predictions", PredictionHistoryPage),
   });
 }

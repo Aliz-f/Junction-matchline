@@ -11,6 +11,7 @@ import { EventTimeline } from "./EventTimeline";
 import { PlannedSurface } from "@/components/ui/PlannedSurface";
 import { MatchImpactPanel } from "@/components/impact/MatchImpactPanel";
 import { MatchRoomsPanel } from "@/components/community/MatchRoomsPanel";
+import { PredictionPanel } from "@/components/prediction/PredictionPanel";
 import { NotInFeed } from "@/components/ui/States";
 import { DemoAiBadge } from "@/components/ui/SourceBadge";
 import type { MatchTab } from "./matchTabs";
@@ -105,15 +106,7 @@ export function MatchTabPanel({ tab, match }: { readonly tab: MatchTab; readonly
       return <MatchRoomsPanel matchId={match.id} />;
 
     case "predict":
-      return (
-        <PlannedSurface
-          task="FE-08"
-          gate="G3"
-          title="Prediction entry"
-          summary="Pick an outcome with an optional exact score, editable until the server-authoritative kick-off. Scoring is settled deterministically afterwards; the server's cutoff always wins over anything the page believes."
-          needs={["GET /matches/{id}/predictions/me", "POST /matches/{id}/predictions"]}
-        />
-      );
+      return <PredictionPanel match={match} />;
 
     case "impact":
       return <MatchImpactPanel matchId={match.id} />;
