@@ -141,3 +141,115 @@
     display: none;
   }
 }
+
+/*
+ * Stadium map (FE-05).
+ *
+ * The tiles are desaturated and lightened so the stadium markers read clearly
+ * against them, giving an illustrated feel without hiding real geography. In
+ * dark mode the same tiles are inverted rather than swapped for a second
+ * provider, which keeps the attribution and usage policy unchanged.
+ */
+.matchline-map .matchline-tiles {
+  filter: saturate(0.55) brightness(1.06) contrast(0.92);
+}
+
+:root[data-theme="dark"] .matchline-map .matchline-tiles {
+  filter: saturate(0.5) brightness(0.78) contrast(0.95) invert(0.9) hue-rotate(180deg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .matchline-map .matchline-tiles {
+    filter: saturate(0.5) brightness(0.78) contrast(0.95) invert(0.9) hue-rotate(180deg);
+  }
+}
+
+/* Leaflet paints its own panes white; let the page background show instead. */
+.matchline-map .leaflet-container {
+  background: rgb(var(--surface-sunken));
+  font-family: inherit;
+}
+
+.matchline-map .leaflet-control-attribution {
+  background: rgb(var(--surface-raised) / 0.85);
+  color: rgb(var(--ink-muted));
+  font-size: 0.625rem;
+}
+
+.matchline-map .leaflet-control-attribution a {
+  color: rgb(var(--ink));
+}
+
+/* Markers ------------------------------------------------------------------ */
+
+.matchline-marker__wrapper {
+  background: none;
+  border: 0;
+}
+
+.matchline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* The label must not intercept clicks meant for the ground itself. */
+  pointer-events: none;
+}
+
+.matchline-marker__glyph {
+  position: relative;
+  pointer-events: auto;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+  transition: transform 150ms ease;
+}
+
+.matchline-marker__wrapper:hover .matchline-marker__glyph {
+  transform: translateY(-2px) scale(1.06);
+}
+
+/* Outline for the viewer's club's home ground. */
+.matchline-marker__ring {
+  position: absolute;
+  inset: -5px -3px;
+  border: 2px solid rgb(245 158 11);
+  border-radius: 9999px;
+}
+
+.matchline-marker__count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 1.05rem;
+  padding: 0 0.2rem;
+  border-radius: 9999px;
+  border: 2px solid rgb(var(--surface-raised));
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
+.matchline-marker__label {
+  margin-top: 1px;
+  max-width: 7.5rem;
+  padding: 1px 5px;
+  border-radius: 0.25rem;
+  background: rgb(var(--surface-raised) / 0.92);
+  color: rgb(var(--ink));
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matchline-marker__glyph {
+    transition: none;
+  }
+  .matchline-marker__wrapper:hover .matchline-marker__glyph {
+    transform: none;
+  }
+}
