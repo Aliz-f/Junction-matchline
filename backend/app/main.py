@@ -7,11 +7,12 @@ from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import uuid4
 
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.auth import router as auth_router
@@ -98,7 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return HealthResponse(status="ok", database="ok" if await database_healthy(request) else "degraded")
 
     @app.get("/api/v1/meta", response_model=MetaView, responses=ERRORS)
-    async def meta(session = Depends(get_session)) -> MetaView:
+    async def meta(session: AsyncSession = Depends(get_session)) -> MetaView:
         demo = settings.mode == "DEMO"
         now, epoch, revision = await runtime_state(session, settings.demo_clock_iso) if demo else (datetime.now(UTC), None, None)
         return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=epoch, scenario_revision=revision, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
