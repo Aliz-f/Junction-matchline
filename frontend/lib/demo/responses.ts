@@ -23,8 +23,9 @@ import type { z } from "zod";
 import type {
   CompetitionSummary,
   ErrorEnvelope,
-  Illumination,
   HealthResponse,
+  Illumination,
+  ImpactInsight,
   MatchDetail,
   MatchSummary,
   MetaView,
@@ -377,4 +378,102 @@ export function demoStadiumMap(selector: MapSelector): z.infer<typeof StadiumMap
     unmapped_matches: unmapped,
     source: demoSource(),
   };
+}
+
+// Impact ----------------------------------------------------------------------
+//
+// IMPORTANT: demo mode cannot produce real impact figures, and does not try.
+//
+// Gap G7: the manifest's snapshots are `{id, key}` only — no standings `as_of`,
+// no rows, and no expected impacts. Points-gap effects and league positions are
+// backend-owned arithmetic (AGENTS.md section 5: "Backend ... owns standings/
+// impact math"), and FE-06 forbids frontend standings maths outright.
+//
+// So every insight below is returned exactly as the spec prescribes for missing
+// evidence: `relevance=UNKNOWN`, `basis=INSUFFICIENT_DATA`, `scenarios=[]`, with
+// an explicit caveat. The one thing that IS verified from the manifest — the
+// actual outcome of a finished fixture — is returned, because the spec asks for
+// a verified `actual_outcome` even when impact evidence is unavailable.
+//
+// `/standings` is deliberately NOT implemented in demo mode: inventing a table
+// would be exactly the fabrication the rules prohibit.
+
+function actualOutcome(fixture: ManifestFixture): "HOME" | "DRAW" | "AWAY" | null {
+  if (fixture.status !== "FINISHED") return null;
+  const { home, away } = fixture.score;
+  if (home === null || away === null) return null;
+  if (home > away) return "HOME";
+  if (home < away) return "AWAY";
+  return "DRAW";
+}
+
+const INSUFFICIENT_CAVEAT =
+  "No standings snapshot is available for this fixture, so its points-gap effect cannot be verified. " +
+  "This is not a statement that the result had no effect.";
+
+function impactInsight(fixture: ManifestFixture, favoriteTeamId: string): ImpactInsight {
+  return {
+    match_id: fixture.id,
+    match: matchSummary(fixture),
+    favorite_team_id: favoriteTeamId,
+    // Included in the relevant feed precisely because it is UNKNOWN, not NONE.
+    relevance: "UNKNOWN",
+    basis: "INSUFFICIENT_DATA",
+    data_version: manifest.schema_version,
+    // Nothing has been verified against a standings snapshot.
+    verified_at: null,
+    actual_outcome: actualOutcome(fixture),
+    // No evidence, so no scenarios. Never a fabricated confirmed case.
+    scenarios: [],
+    summary:
+      actualOutcome(fixture) !== null
+        ? "The result is confirmed, but its effect on your club's points gap cannot be verified from the available data."
+        : "This fixture's effect on your club's points gap cannot be verified from the available data.",
+    summary_type: "TEMPLATE",
+    caveats: [INSUFFICIENT_CAVEAT],
+    sources: [{ ref: manifest.schema_version, label: "Synthetic demo manifest" }],
+  };
+}
+
+/**
+ * Relevant other-team fixtures for a favourite club.
+ *
+ * Excludes the favourite's own fixtures, which belong to the Journey, and
+ * paginates so the client's "follow `next_cursor` to null" loop is exercised
+ * rather than assumed.
+ */
+export function demoRelevantImpact(
+  favoriteTeamId: string,
+  season: number,
+  limit: number,
+  cursor: string | null,
+): { items: ImpactInsight[]; next_cursor: string | null } | null {
+  if (season !== manifest.competition.season_start_year) return null;
+  if (!manifest.teams.some((team) => team.id === favoriteTeamId)) return null;
+
+  const others = chronological(
+    manifest.fixtures.filter(
+      (fixture) =>
+        fixture.home_team_id !== favoriteTeamId && fixture.away_team_id !== favoriteTeamId,
+    ),
+  );
+
+  const offset = cursor === null ? 0 : Number.parseInt(cursor, 10);
+  if (!Number.isInteger(offset) || offset < 0) return null;
+
+  const page = others.slice(offset, offset + limit);
+  const nextOffset = offset + page.length;
+
+  return {
+    items: page.map((fixture) => impactInsight(fixture, favoriteTeamId)),
+    next_cursor: nextOffset < others.length ? String(nextOffset) : null,
+  };
+}
+
+/** Impact for one fixture, including the favourite club's own matches. */
+export function demoMatchImpact(matchId: string, favoriteTeamId: string): ImpactInsight | null {
+  const fixture = manifest.fixtures.find((candidate) => candidate.id === matchId);
+  if (!fixture) return null;
+  if (!manifest.teams.some((team) => team.id === favoriteTeamId)) return null;
+  return impactInsight(fixture, favoriteTeamId);
 }

@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { EventTimeline } from "./EventTimeline";
 import { PlannedSurface } from "@/components/ui/PlannedSurface";
+import { MatchImpactPanel } from "@/components/impact/MatchImpactPanel";
 import { NotInFeed } from "@/components/ui/States";
 import { DemoAiBadge } from "@/components/ui/SourceBadge";
 import type { MatchTab } from "./matchTabs";
@@ -122,15 +123,7 @@ export function MatchTabPanel({ tab, match }: { readonly tab: MatchTab; readonly
       );
 
     case "impact":
-      return (
-        <PlannedSurface
-          task="FE-06"
-          gate="G2"
-          title="What this result means for your club"
-          summary="Points-gap effects per affected team, with hypothetical outcomes before the match and one confirmed case afterwards when trustworthy standings snapshots exist. No position is asserted without full tiebreaks."
-          needs={["GET /matches/{id}/impact", "GET /standings"]}
-        />
-      );
+      return <MatchImpactPanel matchId={match.id} />;
 
     case "whatif":
       return (

@@ -140,19 +140,23 @@ Status: **done** against demo fixtures.
 
 ## FE-06 — Impact and standings · G2
 
-Status: **not started.**
+Status: **structure done**, figures blocked. The UI, ordering, sectioning and
+the full insufficient-evidence path are built and tested; no real impact number
+can be shown until G7 is resolved.
 
 | | Remaining |
 |---|---|
-| **FE** | `/impact` from `/impact/relevant` (all cursor pages) and `/standings` |
-| **FE** | Per-match `GET /matches/{id}/impact`, one `GapEffect` per affected team |
-| **FE** | Preserve signed gap maths without recomputation; `position_change: null` needs its note |
-| **FE** | `NONE` excluded from the feed; `UNKNOWN` included in a neutral unverified section |
-| **FE** | Hypothetical vs CONFIRMED labelling; separate historical-effects area |
-| **FE** | Deterministic `Recommended for your team` ordering |
-| **BE** | D7 — all three endpoints are 501 stubs |
-| **BE** | **G7** — scenarios lack standings `as_of`/`rows` and expected impacts, so confirmed-vs-hypothetical cannot be built |
-| **JOINT** | CT-06 / CT-07; HIGH/MEDIUM/LOW thresholds at 3/6/7/9/10 |
+| **BE** | **G7 is the blocker.** Snapshots are `{id, key}` only — no standings `as_of`, no rows, no expected impacts. Without them there are no points-gap effects, no scenarios and no table |
+| **BE** | D7 — `/impact/relevant`, `/matches/{id}/impact` and `/standings` are 501 stubs |
+| **FE** | Hypothetical-vs-CONFIRMED rendering is implemented but **unexercised**: demo mode can never emit a scenario, so only the zero-scenario path has real data behind it |
+| **FE** | HIGH/MEDIUM/LOW banding is implemented and unit-tested with synthetic insights, but no real insight has been graded |
+| **FE** | Separate historical-effects area, once historical insights exist to put in it |
+| **FE** | Map Impact overlays (FE-05 defers to this task's endpoint) |
+| **JOINT** | CT-06 / CT-07; thresholds at 3/6/7/9/10 |
+
+Demo mode deliberately does **not** implement `/standings`: inventing a table,
+or deriving one from fixture scores, is the fabrication the rules prohibit, and
+positions need tiebreaks nothing specifies. It returns the gap error instead.
 
 ## FE-07 — Community and rooms · G2
 

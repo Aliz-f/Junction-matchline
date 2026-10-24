@@ -12,11 +12,13 @@ import { z } from "zod";
 import {
   AuthUserResponse,
   CompetitionSummary,
+  ImpactInsight,
   JourneyResponse,
   MatchDetail,
   MatchSummary,
   MetaView,
   StadiumMapResponse,
+  StandingsResponse,
   TeamSummary,
   Uuid,
 } from "./contract";
@@ -38,6 +40,7 @@ const FavoriteResponse = z.object({ favorite_team_id: Uuid.nullable() }).strict(
 /** A1 page envelope: `{items, next_cursor}`. */
 const MatchPage = z.object({ items: z.array(MatchSummary), next_cursor: z.string().nullable() }).strict();
 const MatchdayList = z.object({ items: z.array(z.number().int()) }).strict();
+const ImpactPage = z.object({ items: z.array(ImpactInsight), next_cursor: z.string().nullable() }).strict();
 
 /**
  * The current session.
@@ -115,6 +118,76 @@ export function useAllMatches(): UseQueryResult<z.infer<typeof MatchPage>> {
  * The caller must pass a `date` OR a `matchday`, never both: the backend
  * rejects the ambiguous case and the UI must not paper over it.
  */
+/** A1 caps the page size at 100; request the maximum to minimise round trips. */
+const IMPACT_PAGE_LIMIT = 100;
+
+/**
+ * All relevant other-team fixtures for a favourite club.
+ *
+ * Follows `next_cursor` to null inside the query function, because FE-06
+ * requires the COMPLETE set: using only the first page would silently
+ * under-report map overlays and the impact feed. A partial failure rejects the
+ * whole query so the UI shows impact as unavailable rather than as a short list
+ * that looks complete.
+ */
+export function useRelevantImpact(
+  favoriteTeamId: string | null,
+  season: number | null,
+): UseQueryResult<{ items: z.infer<typeof ImpactInsight>[] }> {
+  return useQuery({
+    queryKey: publicKeys.relevantImpact(favoriteTeamId ?? "none", season ?? 0),
+    enabled: Boolean(favoriteTeamId) && Boolean(season),
+    queryFn: async () => {
+      const items: z.infer<typeof ImpactInsight>[] = [];
+      let cursor: string | null = null;
+      // Bounded so a misbehaving cursor cannot loop forever.
+      for (let page = 0; page < 50; page += 1) {
+        const result: z.infer<typeof ImpactPage> = await apiRequest("/impact/relevant", ImpactPage, {
+          query: {
+            favorite_team_id: favoriteTeamId,
+            competition: "PL",
+            season,
+            limit: IMPACT_PAGE_LIMIT,
+            cursor,
+          },
+        });
+        items.push(...result.items);
+        cursor = result.next_cursor;
+        if (cursor === null) return { items };
+      }
+      throw new Error("Impact pagination did not terminate");
+    },
+  });
+}
+
+/** Impact for one fixture, relative to the viewer's favourite club. */
+export function useMatchImpact(
+  matchId: string | null,
+  favoriteTeamId: string | null,
+): UseQueryResult<z.infer<typeof ImpactInsight>> {
+  return useQuery({
+    queryKey: publicKeys.matchImpact(matchId ?? "none", favoriteTeamId ?? "none"),
+    enabled: Boolean(matchId) && Boolean(favoriteTeamId),
+    queryFn: () =>
+      apiRequest(`/matches/${matchId}/impact`, ImpactInsight, {
+        query: { favorite_team_id: favoriteTeamId, competition: "PL" },
+      }),
+  });
+}
+
+/** The live league table. Positions and maths come from the server only. */
+export function useStandings(
+  competition: string,
+  season: number | null,
+): UseQueryResult<z.infer<typeof StandingsResponse>> {
+  return useQuery({
+    queryKey: publicKeys.standings(competition, season ?? 0),
+    enabled: season !== null,
+    queryFn: () =>
+      apiRequest("/standings", StandingsResponse, { query: { competition, season } }),
+  });
+}
+
 /** Matchdays available for explicit selection on the map. */
 export function useMatchdays(
   competition: string,

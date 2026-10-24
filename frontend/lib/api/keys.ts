@@ -31,6 +31,9 @@ export const publicKeys = {
   matches: () => ["matches"] as const,
   stadiumMap: (date: string | null, matchday: number | null) =>
     ["map", "stadiums", date, matchday] as const,
+  relevantImpact: (teamId: string, season: number) => ["impact", "relevant", teamId, season] as const,
+  matchImpact: (matchId: string, teamId: string) => ["impact", "match", matchId, teamId] as const,
+  standings: (competition: string, season: number) => ["standings", competition, season] as const,
   match: (matchId: string) => ["match", matchId] as const,
 };
 

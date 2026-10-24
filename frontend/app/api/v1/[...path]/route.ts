@@ -23,7 +23,9 @@ import {
   demoMatchDetail,
   demoMatchdays,
   demoMatches,
+  demoMatchImpact,
   demoMeta,
+  demoRelevantImpact,
   demoStadiumMap,
   demoTeams,
 } from "@/lib/demo/responses";
@@ -103,6 +105,30 @@ export async function GET(
     case "/matches":
       return ok(demoMatches());
 
+    case "/impact/relevant": {
+      const favorite = url.searchParams.get("favorite_team_id");
+      const season = url.searchParams.get("season");
+      const limitRaw = url.searchParams.get("limit");
+      if (!favorite) return fail("INVALID_INPUT", "favorite_team_id is required", { field: "favorite_team_id" });
+      if (!season || !/^\d{4}$/.test(season)) {
+        return fail("INVALID_INPUT", "season must be a four-digit year", { field: "season" });
+      }
+      const limit = limitRaw === null ? 20 : Number(limitRaw);
+      // A1 caps the page size at 100.
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        return fail("INVALID_INPUT", "limit must be between 1 and 100", { field: "limit" });
+      }
+      const page = demoRelevantImpact(favorite, Number(season), limit, url.searchParams.get("cursor"));
+      if (!page) return fail("NOT_FOUND", "No impact for that club and season");
+      return ok(page);
+    }
+
+    case "/standings":
+      // Deliberately unimplemented: see the Impact note in lib/demo/responses.ts.
+      // Gap G7 means there is no standings evidence, and inventing a table is
+      // exactly what the rules forbid.
+      return notYetAvailable("/standings");
+
     case "/map/stadiums": {
       const date = url.searchParams.get("date");
       const matchdayRaw = url.searchParams.get("matchday");
@@ -124,6 +150,17 @@ export async function GET(
     }
 
     default: {
+      // GET /matches/{id}/impact?favorite_team_id=UUID
+      if (path.length === 3 && path[0] === "matches" && path[2] === "impact") {
+        const favorite = url.searchParams.get("favorite_team_id");
+        if (!favorite) {
+          return fail("INVALID_INPUT", "favorite_team_id is required", { field: "favorite_team_id" });
+        }
+        const insight = demoMatchImpact(path[1] ?? "", favorite);
+        if (!insight) return fail("NOT_FOUND", "Match not found");
+        return ok(insight);
+      }
+
       // GET /matches/{id}
       if (path.length === 2 && path[0] === "matches") {
         const detail = demoMatchDetail(path[1] ?? "");
