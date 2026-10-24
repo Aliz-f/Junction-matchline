@@ -228,6 +228,8 @@ class RoomRecord(Base):
     kind: Mapped[str] = mapped_column(String(16))
     title: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(16), default="OPEN")
+    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class RoomMessageRecord(Base):

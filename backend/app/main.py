@@ -19,6 +19,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.football import router as football_router
 from app.api.v1.impact import router as impact_router
 from app.api.v1.profile import router as profile_router
+from app.api.v1.rooms import router as rooms_router
 from app.core.config import Settings, get_settings
 from app.core.errors import (
     ApiError,
@@ -40,7 +41,6 @@ from app.schemas.contract import (
     MetaCapabilities,
     MetaView,
     PredictionRequest,
-    ReportRequest,
     RoomCreateRequest,
     RoomMessageRequest,
     TeamsResponse,
@@ -109,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(football_router)
     app.include_router(impact_router)
     app.include_router(profile_router)
+    app.include_router(rooms_router)
 
     provider = DemoSportsDataProvider()
 
@@ -166,7 +167,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await stub(request)
         app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
 
-    for path in ("/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+    for path in ("/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
         route(path, ["GET"])
     async def body_stub(request: Request) -> JSONResponse:
         return await stub(request)
@@ -179,10 +180,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/v1/rooms/{id}/messages", responses=ERRORS)
     async def room_message_stub(id: str, _: RoomMessageRequest, request: Request) -> JSONResponse:
         del id
-        return await body_stub(request)
-
-    @app.post("/api/v1/reports", responses=ERRORS)
-    async def report_stub(_: ReportRequest, request: Request) -> JSONResponse:
         return await body_stub(request)
 
     @app.post("/api/v1/matches/{id}/predictions", responses=ERRORS)
