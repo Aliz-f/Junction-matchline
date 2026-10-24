@@ -231,7 +231,14 @@ class StadiumVenue(ContractModel):
     lng: float
     coord_verified: Literal[True]
     home_team_ids: list[UUID]
-    illumination_state: Literal["UPCOMING_ROUND", "LIVE", "COMPLETED", "INACTIVE", "POSTPONED_OR_CANCELLED", "UNKNOWN"]
+    illumination_state: Literal[
+        "UPCOMING_ROUND",
+        "LIVE",
+        "COMPLETED",
+        "INACTIVE",
+        "POSTPONED_OR_CANCELLED",
+        "UNKNOWN",
+    ]
     fixtures: list[StadiumFixture]
 
 
@@ -326,7 +333,9 @@ class PredictionRequest(ContractModel):
     @model_validator(mode="after")
     def score_pair_matches_outcome(self) -> "PredictionRequest":
         if (self.home_score is None) != (self.away_score is None):
-            raise ValueError("home_score and away_score must both be null or both be present")
+            raise ValueError(
+                "home_score and away_score must both be null or both be present"
+            )
         if self.home_score is None:
             return self
         assert self.away_score is not None
@@ -349,6 +358,73 @@ class RoomCreateRequest(ContractModel):
 
 class RoomMessageRequest(ContractModel):
     body: str
+
+
+class BadgeView(ContractModel):
+    code: str
+    label: str
+    earned_at: Utc
+    active: bool
+    rule_description: str
+
+
+class AuthorPublic(ContractModel):
+    id: UUID
+    display_name: str
+    public_badges: list[BadgeView]
+
+
+class RoomSummary(ContractModel):
+    id: UUID
+    match_id: UUID
+    match: MatchSummary
+    kind: RoomKind
+    title: str
+    status: RoomStatus
+    created_by: AuthorPublic | None
+    message_count: int
+    can_post: bool
+    can_create: bool
+
+
+class RoomMessage(ContractModel):
+    id: UUID
+    room_id: UUID
+    body: str
+    created_at: Utc
+    author: AuthorPublic
+    moderation_state: Literal["VISIBLE", "FLAGGED"]
+
+
+class RoomMessagesPage(ContractModel):
+    items: list[RoomMessage]
+    next_cursor: str | None
+    sync_after_seq: int
+
+
+class RoomChangeUpsert(ContractModel):
+    seq: int
+    kind: Literal["UPSERT"]
+    message_id: UUID
+    message: RoomMessage
+
+
+class RoomChangeRemove(ContractModel):
+    seq: int
+    kind: Literal["REMOVE"]
+    message_id: UUID
+    message: None = None
+
+
+class RoomChangePage(ContractModel):
+    items: list[RoomChangeUpsert | RoomChangeRemove]
+    next_after_seq: int
+    has_more: bool
+
+
+class ReportResponse(ContractModel):
+    id: UUID
+    status: Literal["OPEN"]
 
 
 class ReportRequest(ContractModel):
