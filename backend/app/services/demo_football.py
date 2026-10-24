@@ -19,6 +19,7 @@ from app.db.football_models import (
     Competition,
     Match,
     MatchEventRecord,
+    RoomRecord,
     Season,
     SeasonTeamHomeVenue,
     Team,
@@ -66,7 +67,15 @@ def utc(value: str) -> datetime:
 
 def manifest() -> dict[str, Any]:
     """Return the canonical manifest with a local typed boundary."""
-    return load_demo_manifest()
+    data = load_demo_manifest()
+    fixture_statuses = {fixture["id"]: fixture["status"] for fixture in data["fixtures"]}
+    for room in data.get("rooms", []):
+        room["status"] = (
+            "HIDDEN"
+            if room["kind"] == "POST_MATCH" and fixture_statuses[room["match_id"]] != "FINISHED"
+            else "OPEN"
+        )
+    return data
 
 
 def iso_z(value: datetime) -> str:
@@ -105,6 +114,7 @@ async def persisted_manifest(session: AsyncSession, competition_code: str = "PL"
                 )
             ).all()
         )
+        rooms = list((await session.scalars(select(RoomRecord))).all())
         events = list(
             (await session.scalars(select(MatchEventRecord).where(MatchEventRecord.match_id.in_([item.id for item in matches])))).all()
         ) if matches else []
@@ -169,6 +179,10 @@ async def persisted_manifest(session: AsyncSession, competition_code: str = "PL"
             }
             for item in matches
         ],
+        "rooms": [
+            {"match_id": item.match_id, "kind": item.kind, "status": item.status}
+            for item in rooms
+        ],
     }
 
 
@@ -188,7 +202,29 @@ def select_fixtures(
     return [item for item in fixtures if utc(item["kickoff_at"]).astimezone(LONDON).date() == london_date]
 
 
-def summary(fixture: dict[str, Any], data: dict[str, Any] | None = None) -> MatchSummary:
+def fixture_features(
+    fixture: dict[str, Any], data: dict[str, Any], server_now_utc: datetime
+) -> MatchFeatures:
+    """Derive capabilities from discoverable rooms and the authoritative clock."""
+    rooms = data.get("rooms", [])
+    discoverable_kinds = {
+        room["kind"]
+        for room in rooms
+        if room.get("match_id") == fixture["id"] and room.get("status", "OPEN") != "HIDDEN"
+    }
+    return MatchFeatures(
+        pre_match_room="PRE_MATCH" in discoverable_kinds,
+        predictions_open=(
+            fixture["status"] == "SCHEDULED" and utc(fixture["kickoff_at"]) > server_now_utc
+        ),
+        whatif_available=fixture["status"] == "FINISHED",
+        post_match_room="POST_MATCH" in discoverable_kinds,
+    )
+
+
+def summary(
+    fixture: dict[str, Any], data: dict[str, Any] | None = None, *, server_now_utc: datetime | None = None
+) -> MatchSummary:
     data = manifest() if data is None else data
     competition = data["competition"]
     teams = {item["id"]: item for item in data["teams"]}
@@ -205,6 +241,7 @@ def summary(fixture: dict[str, Any], data: dict[str, Any] | None = None) -> Matc
             coord_verified=venue_data["coord_verified"],
         )
     score = fixture.get("score") or {"home": None, "away": None}
+    now = utc(data["demo_clock"]) if server_now_utc is None else server_now_utc.astimezone(UTC)
     return MatchSummary(
         id=UUID(fixture["id"]),
         competition=CompetitionSummary(
@@ -223,12 +260,7 @@ def summary(fixture: dict[str, Any], data: dict[str, Any] | None = None) -> Matc
         score=MatchScore(home=score.get("home"), away=score.get("away")),
         venue=venue,
         source=source(),
-        features=MatchFeatures(
-            pre_match_room=fixture["status"] == "SCHEDULED",
-            predictions_open=fixture["status"] == "SCHEDULED",
-            whatif_available=fixture["status"] == "FINISHED",
-            post_match_room=fixture["status"] == "FINISHED",
-        ),
+        features=fixture_features(fixture, data, now),
     )
 
 
@@ -262,9 +294,9 @@ def stadium_map(
     for fixture in selected:
         venue = venues.get(fixture.get("venue_id"))
         if venue is None:
-            unmapped.append(UnmappedMatch(match=summary(fixture, data), reason="VENUE_MISSING"))
+            unmapped.append(UnmappedMatch(match=summary(fixture, data, server_now_utc=now), reason="VENUE_MISSING"))
         elif not venue.get("coord_verified") or venue.get("lat") is None or venue.get("lng") is None:
-            unmapped.append(UnmappedMatch(match=summary(fixture, data), reason="VENUE_COORDINATES_UNVERIFIED"))
+            unmapped.append(UnmappedMatch(match=summary(fixture, data, server_now_utc=now), reason="VENUE_COORDINATES_UNVERIFIED"))
 
     stadiums: list[StadiumVenue] = []
     for venue in sorted(venues.values(), key=lambda item: item["name"]):
@@ -282,7 +314,7 @@ def stadium_map(
                 coord_verified=True,
                 home_team_ids=sorted(venue.get("home_team_ids", [])),
                 illumination_state=illumination_state(venue_fixtures, server_now_utc=now),
-                fixtures=[StadiumFixture(match=summary(item, data)) for item in venue_fixtures],
+                fixtures=[StadiumFixture(match=summary(item, data, server_now_utc=now)) for item in venue_fixtures],
             )
         )
     return StadiumMapResponse(

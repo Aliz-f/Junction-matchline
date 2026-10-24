@@ -162,3 +162,29 @@
     display: none;
   }
 }
+
+/*
+ * Illustrated England map (FE-05).
+ *
+ * No tiles, so there is nothing to theme per colour scheme: the landmass is
+ * drawn with its own gradients and sits on the page background.
+ */
+.matchline-england {
+  display: block;
+  overflow: visible;
+}
+
+.matchline-pin {
+  transition: transform 150ms ease;
+  transform-box: fill-box;
+}
+
+.matchline-pin:not(.matchline-pin--inert):hover {
+  filter: brightness(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matchline-pin {
+    transition: none;
+  }
+}

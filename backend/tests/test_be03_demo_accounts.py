@@ -38,8 +38,8 @@ async def test_demo_account_seed_creates_free_and_premium_without_exposing_secre
     await seed_demo_accounts(database_session, settings)
     await database_session.commit()
     users = list((await database_session.scalars(select(UserRecord).order_by(UserRecord.email))).all())
-    assert [(item.email, item.plan) for item in users] == [
-        ("free@example.test", "FREE"),
-        ("premium@example.test", "PREMIUM"),
+    assert [(item.id, item.email, item.plan, item.favorite_team_id) for item in users] == [
+        ("90000000-0000-4000-8000-000000000001", "free@example.test", "FREE", "20000000-0000-4000-8000-000000000001"),
+        ("90000000-0000-4000-8000-000000000002", "premium@example.test", "PREMIUM", "20000000-0000-4000-8000-000000000002"),
     ]
     assert all("password" not in item.password_hash.lower() for item in users)

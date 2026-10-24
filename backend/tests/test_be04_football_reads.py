@@ -17,6 +17,7 @@ from app.services.demo_football import (
     manifest,
     select_fixtures,
     stadium_map,
+    summary,
 )
 
 
@@ -57,6 +58,19 @@ def test_matches_have_stable_cursor_pagination() -> None:
     assert invalid.status_code == 422
 
 
+def test_matches_honor_utc_from_and_to_filters() -> None:
+    with client() as api:
+        response = api.get(
+            "/api/v1/matches?competition=PL&from=2026-10-24T00:00:00Z&to=2026-10-24T23:59:59Z"
+        )
+        invalid = api.get("/api/v1/matches?competition=PL&from=2026-10-24T00:00:00")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["items"]] == [
+        "30000000-0000-4000-8000-000000000002"
+    ]
+    assert invalid.status_code == 422
+
+
 def test_future_scheduled_fixture_is_upcoming_not_live() -> None:
     with client() as api:
         response = api.get("/api/v1/map/stadiums?competition=PL&season=2026&matchday=11")
@@ -89,6 +103,24 @@ def test_clock_never_promotes_a_scheduled_fixture_to_live() -> None:
     fixture = {"status": "SCHEDULED", "kickoff_at": "2026-10-24T11:00:00Z"}
     now = datetime(2026, 10, 24, 12, tzinfo=UTC)
     assert illumination_state([fixture], server_now_utc=now) == "UNKNOWN"
+
+
+def test_match_features_use_room_discoverability_and_authoritative_clock() -> None:
+    data = manifest()
+    scheduled = next(item for item in data["fixtures"] if item["key"] == "match_upcoming")
+    finished = next(item for item in data["fixtures"] if item["key"] == "match_finished")
+    after_kickoff = datetime(2026, 11, 1, 15, tzinfo=UTC)
+
+    scheduled_features = summary(scheduled, data, server_now_utc=after_kickoff).features
+    finished_features = summary(finished, data, server_now_utc=after_kickoff).features
+
+    assert scheduled_features.pre_match_room is True
+    assert scheduled_features.predictions_open is False
+    assert finished_features.post_match_room is True
+
+    scheduled["status"] = "FINISHED"
+    archived_features = summary(scheduled, data, server_now_utc=after_kickoff).features
+    assert archived_features.pre_match_room is True
 
 
 def test_map_keeps_inactive_home_venues_and_neutral_and_mixed_venue_semantics() -> None:
