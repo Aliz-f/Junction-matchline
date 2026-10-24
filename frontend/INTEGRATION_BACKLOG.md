@@ -132,6 +132,7 @@ Status: **done** against demo fixtures.
 | **BE** | D7 — `/map/stadiums` is a 501 stub; `illumination_state` must come from the backend, not demo mode's stand-in aggregation |
 | **BE** | Precedence between illumination states for a venue hosting several selected fixtures is unspecified — demo mode picked one and the backend owns the real rule |
 | **BE** | No fixture has an unverified-coordinate venue, so `VENUE_COORDINATES_UNVERIFIED` is untested against real data |
+| **BE** | **G10 (new): all three manifest venues are within 14 km of each other in London**, including one named "North East Demo Ground" at 51.60, -0.07. The names imply national spread; the coordinates do not. The map renders correctly but shows three markers clustered in London rather than across England. Not a frontend bug — the coordinates are `coord_verified: true` — but it makes the map demo misleading |
 | **JOINT** | CT-02–CT-05 selector/subset rules and the CT-15 no-favourite path, against the real backend |
 
 ## FE-06 — Impact and standings · G2
