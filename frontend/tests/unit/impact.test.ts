@@ -67,7 +67,13 @@ describe("demoRelevantImpact", () => {
     let cursor: string | null = null;
     let pages = 0;
     for (;;) {
-      const page = demoRelevantImpact(ARSENAL, SEASON, 3, cursor)!;
+      // Annotated because `cursor` is assigned from `page`, which TS cannot infer.
+      const page: { items: Insight[]; next_cursor: string | null } = demoRelevantImpact(
+        ARSENAL,
+        SEASON,
+        3,
+        cursor,
+      )!;
       pages += 1;
       cursor = page.next_cursor;
       if (cursor === null) break;

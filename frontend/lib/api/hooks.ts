@@ -17,6 +17,7 @@ import {
   MatchDetail,
   MatchSummary,
   MetaView,
+  RoomSummary,
   StadiumMapResponse,
   StandingsResponse,
   TeamSummary,
@@ -40,6 +41,8 @@ const FavoriteResponse = z.object({ favorite_team_id: Uuid.nullable() }).strict(
 /** A1 page envelope: `{items, next_cursor}`. */
 const MatchPage = z.object({ items: z.array(MatchSummary), next_cursor: z.string().nullable() }).strict();
 const MatchdayList = z.object({ items: z.array(z.number().int()) }).strict();
+const RoomPage = z.object({ items: z.array(RoomSummary), next_cursor: z.string().nullable() }).strict();
+const RoomList = z.object({ items: z.array(RoomSummary) }).strict();
 const ImpactPage = z.object({ items: z.array(ImpactInsight), next_cursor: z.string().nullable() }).strict();
 
 /**
@@ -172,6 +175,46 @@ export function useMatchImpact(
       apiRequest(`/matches/${matchId}/impact`, ImpactInsight, {
         query: { favorite_team_id: favoriteTeamId, competition: "PL" },
       }),
+  });
+}
+
+/**
+ * Discoverable rooms. Partitioned by identity, because `can_post` and
+ * `can_create` are contextual permissions that differ per caller (CT-08).
+ */
+export function useRooms(): UseQueryResult<z.infer<typeof RoomPage>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.roomsIndex(scope),
+    queryFn: () => apiRequest("/rooms", RoomPage, { query: { competition: "PL" } }),
+  });
+}
+
+/** Rooms for one match, for the match page's Discuss tab. */
+export function useMatchRooms(matchId: string | null): UseQueryResult<z.infer<typeof RoomList>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.rooms(scope, matchId ?? "none"),
+    enabled: Boolean(matchId),
+    queryFn: () => apiRequest(`/matches/${matchId}/rooms`, RoomList),
+  });
+}
+
+/**
+ * One room by id.
+ *
+ * Always fetched directly rather than looked up in the index, so a direct link
+ * works after a refresh (FE-07) and a hidden room 404s uniformly.
+ */
+export function useRoom(roomId: string | null): UseQueryResult<z.infer<typeof RoomSummary>> {
+  const { user } = useSession();
+  const scope = identityScope(user?.id);
+  return useQuery({
+    queryKey: userKeys.room(scope, roomId ?? "none"),
+    enabled: Boolean(roomId),
+    queryFn: () => apiRequest(`/rooms/${roomId}`, RoomSummary),
   });
 }
 

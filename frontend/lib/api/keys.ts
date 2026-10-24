@@ -49,6 +49,7 @@ export const userKeys = {
   predictions: (scope: IdentityScope) => ["user", scope, "predictions"] as const,
   currentPrediction: (scope: IdentityScope, matchId: string) =>
     ["user", scope, "prediction", matchId] as const,
+  roomsIndex: (scope: IdentityScope) => ["user", scope, "rooms"] as const,
   rooms: (scope: IdentityScope, matchId: string) => ["user", scope, "rooms", matchId] as const,
   room: (scope: IdentityScope, roomId: string) => ["user", scope, "room", roomId] as const,
   roomChanges: (scope: IdentityScope, roomId: string) => ["user", scope, "room", roomId, "changes"] as const,

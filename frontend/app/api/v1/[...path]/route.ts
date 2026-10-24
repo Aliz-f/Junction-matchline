@@ -26,6 +26,11 @@ import {
   demoMatchImpact,
   demoMeta,
   demoRelevantImpact,
+  demoRoom,
+  demoRoomChanges,
+  demoRoomMessages,
+  demoRooms,
+  demoMatchRooms,
   demoStadiumMap,
   demoTeams,
 } from "@/lib/demo/responses";
@@ -123,6 +128,9 @@ export async function GET(
       return ok(page);
     }
 
+    case "/rooms":
+      return ok(demoRooms());
+
     case "/standings":
       // Deliberately unimplemented: see the Impact note in lib/demo/responses.ts.
       // Gap G7 means there is no standings evidence, and inventing a table is
@@ -150,6 +158,45 @@ export async function GET(
     }
 
     default: {
+      // GET /rooms/{id} | /rooms/{id}/messages | /rooms/{id}/changes
+      //
+      // A HIDDEN template returns the SAME 404 as an unknown id on every one of
+      // these, so knowing the UUID reveals nothing about whether it exists.
+      if (path.length >= 2 && path[0] === "rooms") {
+        const roomId = path[1] ?? "";
+        const leaf = path[2];
+
+        if (path.length === 2) {
+          const room = demoRoom(roomId);
+          return room ? ok(room) : fail("NOT_FOUND", "Room not found");
+        }
+
+        if (path.length === 3 && leaf === "messages") {
+          const page = demoRoomMessages(roomId);
+          return page ? ok(page) : fail("NOT_FOUND", "Room not found");
+        }
+
+        if (path.length === 3 && leaf === "changes") {
+          const afterRaw = url.searchParams.get("after_seq");
+          const afterSeq = afterRaw === null ? 0 : Number(afterRaw);
+          if (!Number.isInteger(afterSeq) || afterSeq < 0) {
+            return fail("INVALID_INPUT", "after_seq must be a non-negative integer", {
+              field: "after_seq",
+            });
+          }
+          const changes = demoRoomChanges(roomId, afterSeq);
+          return changes ? ok(changes) : fail("NOT_FOUND", "Room not found");
+        }
+
+        return fail("NOT_FOUND", "Room not found");
+      }
+
+      // GET /matches/{id}/rooms
+      if (path.length === 3 && path[0] === "matches" && path[2] === "rooms") {
+        const rooms = demoMatchRooms(path[1] ?? "");
+        return rooms ? ok(rooms) : fail("NOT_FOUND", "Match not found");
+      }
+
       // GET /matches/{id}/impact?favorite_team_id=UUID
       if (path.length === 3 && path[0] === "matches" && path[2] === "impact") {
         const favorite = url.searchParams.get("favorite_team_id");

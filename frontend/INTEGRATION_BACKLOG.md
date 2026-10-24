@@ -160,20 +160,25 @@ positions need tiebreaks nothing specifies. It returns the gap error instead.
 
 ## FE-07 — Community and rooms · G2
 
-Status: **not started.** Route and 404 behaviour exist.
+Status: **structure and sync logic done**, message content blocked.
+
+The change-feed reducer (`lib/rooms/sync.ts`) is complete and heavily tested as
+a pure function — cursor advancement on all-REMOVE pages, idempotent duplicate
+REMOVEs, removals surviving backward pagination, reinstatement by a newer
+UPSERT, stable order for equal timestamps, and the empty-room → 45-message
+burst. Demo rooms are empty, so none of it has run against real messages.
 
 | | Remaining |
 |---|---|
-| **FE** | Global room list, per-match rooms, direct room fetch by `GET /rooms/{id}` (not from the index) |
-| **FE** | Message pagination with `sync_after_seq`, `/changes` polling, ordered UPSERT/REMOVE applied to all loaded pages |
-| **FE** | 15-second foreground polling, on focus, on reconnect, on `/meta` revision change, after a 409 |
-| **FE** | Composer available to FREE in OPEN rooms; PREMIUM-only create form; `can_create` as a same-kind, match-phase permission |
-| **FE** | Read-only at cutoff; 403 `PREMIUM_REQUIRED` and 409 `ROOM_CLOSED` without silent message loss |
-| **FE** | Reporting, sanitisation, draft preservation; HIDDEN excluded entirely, FLAGGED visible |
+| **BE** | **G9 is the blocker for content.** The burst fixtures give a UUID5 namespace but no name template, body, author or timestamp step, so neither side can generate identical messages. Demo rooms are empty rather than invented |
+| **BE** | **G5** — `RoomSummary.title` is required by Appendix A but absent from the manifest. Demo mode derives a label from `kind`; the real title is still owed |
+| **BE** | **G6** — no hidden `POST_MATCH` template exists, so the "hidden template 404s everywhere" path has no real fixture behind it (the uniform-404 handler is in place and tested against unknown ids) |
 | **BE** | D7 — every room endpoint is a 501 stub |
-| **BE** | **G5** (no `RoomSummary.title`), **G6** (no hidden POST_MATCH template), **G9** (burst fixtures underspecified, so both sides cannot generate identical messages) |
+| **FE** | Premium create-room form. Demo mode has no session, so `can_create` is always false and the form has no reachable state; the FREE explanation and `/premium` link are in place |
+| **FE** | Scroll preservation when prepending older pages |
+| **FE** | Author badges render from `AuthorPublic.public_badges`, but no demo message has an author |
 | **SECRET** | BE-03 FREE and PREMIUM credentials — G2 cannot pass without them |
-| **JOINT** | CT-08, CT-12, CT-16, CT-17, CT-19 |
+| **JOINT** | CT-08, CT-12, CT-16, CT-17, CT-19 against the real backend |
 
 ## FE-08 — predictions, badges, profile · G3
 

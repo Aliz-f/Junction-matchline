@@ -10,6 +10,7 @@ import Link from "next/link";
 import { EventTimeline } from "./EventTimeline";
 import { PlannedSurface } from "@/components/ui/PlannedSurface";
 import { MatchImpactPanel } from "@/components/impact/MatchImpactPanel";
+import { MatchRoomsPanel } from "@/components/community/MatchRoomsPanel";
 import { NotInFeed } from "@/components/ui/States";
 import { DemoAiBadge } from "@/components/ui/SourceBadge";
 import type { MatchTab } from "./matchTabs";
@@ -101,15 +102,7 @@ export function MatchTabPanel({ tab, match }: { readonly tab: MatchTab; readonly
       return <EventTimeline match={match} />;
 
     case "discuss":
-      return (
-        <PlannedSurface
-          task="FE-07"
-          gate="G2"
-          title={match.status === "FINISHED" ? "Match rooms, including the pre-match archive" : "Pre-match room"}
-          summary="The message feed with incremental sync, server-decided posting rights, the kick-off cutoff, reporting and moderation. A room that has closed is shown read-only rather than as a failed post."
-          needs={["GET /matches/{id}/rooms", "GET /rooms/{id}/messages", "GET /rooms/{id}/changes"]}
-        />
-      );
+      return <MatchRoomsPanel matchId={match.id} />;
 
     case "predict":
       return (

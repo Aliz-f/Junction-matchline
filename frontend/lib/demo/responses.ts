@@ -29,6 +29,9 @@ import type {
   MatchDetail,
   MatchSummary,
   MetaView,
+  RoomChangePage,
+  RoomMessagesPage,
+  RoomSummary,
   SourceView,
   TeamSummary,
   UserPublic,
@@ -476,4 +479,122 @@ export function demoMatchImpact(matchId: string, favoriteTeamId: string): Impact
   if (!fixture) return null;
   if (!manifest.teams.some((team) => team.id === favoriteTeamId)) return null;
   return impactInsight(fixture, favoriteTeamId);
+}
+
+// Community rooms -------------------------------------------------------------
+//
+// Two manifest-backed rooms exist, both with ZERO messages.
+//
+// Gap G9 is why: the manifest gives the burst fixtures a UUID5 namespace but no
+// name template, body, author or timestamp step, so neither side can generate
+// identical messages. Inventing message content would be fabricated user
+// content, so demo rooms are empty and `sync_after_seq` is 0. The empty-room
+// path is itself a required contract case, so this is a real scenario rather
+// than a hole.
+//
+// Gap G5: `RoomSummary.title` is required by Appendix A but absent from the
+// manifest. Demo mode derives a label from `kind`, which is a display string
+// determined by the contract enum rather than invented content. The real title
+// is still owed by the backend.
+//
+// Room status follows the spec's own rules:
+//   PRE_MATCH  OPEN while the fixture is SCHEDULED and before kickoff,
+//              READ_ONLY from kickoff onwards (archive stays discoverable)
+//   POST_MATCH discoverable only once the fixture is FINISHED; a template for a
+//              non-finished fixture is HIDDEN and must 404 everywhere
+//
+// `can_post` and `can_create` are contextual permissions. Demo mode has no
+// session, so the caller is always a guest: both are false, and the UI explains
+// that signing in is required rather than showing a dead composer.
+
+type ManifestRoom = DemoManifest["rooms"][number];
+
+const ROOM_TITLES: Record<"PRE_MATCH" | "POST_MATCH", string> = {
+  PRE_MATCH: "Pre-match discussion",
+  POST_MATCH: "Post-match discussion",
+};
+
+function roomStatus(room: ManifestRoom, fixture: ManifestFixture): "OPEN" | "READ_ONLY" | "HIDDEN" {
+  const beforeKickoff = Date.parse(fixture.kickoff_at) > Date.parse(manifest.demo_clock);
+
+  if (room.kind === "PRE_MATCH") {
+    // Clock-driven cutoff: at or past kickoff the room is read-only even if the
+    // fixture is still marked SCHEDULED (CT-17).
+    return fixture.status === "SCHEDULED" && beforeKickoff ? "OPEN" : "READ_ONLY";
+  }
+  // A POST_MATCH template is not discoverable until the fixture is FINISHED.
+  return fixture.status === "FINISHED" ? "OPEN" : "HIDDEN";
+}
+
+function roomSummary(room: ManifestRoom, fixture: ManifestFixture): RoomSummary {
+  return {
+    id: room.id,
+    match_id: room.match_id,
+    match: matchSummary(fixture),
+    kind: room.kind,
+    title: ROOM_TITLES[room.kind],
+    status: roomStatus(room, fixture),
+    // System-seeded rooms have no creator.
+    created_by: null,
+    message_count: 0,
+    // Guest: cannot post, cannot create. The backend decides this per caller.
+    can_post: false,
+    can_create: false,
+  };
+}
+
+function roomWithFixture(roomId: string): { room: ManifestRoom; fixture: ManifestFixture } | null {
+  const room = manifest.rooms.find((candidate) => candidate.id === roomId);
+  if (!room) return null;
+  const fixture = manifest.fixtures.find((candidate) => candidate.id === room.match_id);
+  if (!fixture) return null;
+  return { room, fixture };
+}
+
+/** Only discoverable rooms. A HIDDEN template is excluded from every index. */
+function discoverableRooms(): RoomSummary[] {
+  const summaries: RoomSummary[] = [];
+  for (const room of manifest.rooms) {
+    const pair = roomWithFixture(room.id);
+    if (!pair) continue;
+    const summary = roomSummary(pair.room, pair.fixture);
+    if (summary.status !== "HIDDEN") summaries.push(summary);
+  }
+  return summaries.sort(
+    (a, b) => Date.parse(a.match.kickoff_at) - Date.parse(b.match.kickoff_at) || a.id.localeCompare(b.id),
+  );
+}
+
+export function demoRooms(): { items: RoomSummary[]; next_cursor: null } {
+  return { items: discoverableRooms(), next_cursor: null };
+}
+
+export function demoMatchRooms(matchId: string): { items: RoomSummary[] } | null {
+  if (!manifest.fixtures.some((fixture) => fixture.id === matchId)) return null;
+  return { items: discoverableRooms().filter((room) => room.match_id === matchId) };
+}
+
+/**
+ * One room by id.
+ *
+ * Returns null for a HIDDEN template as well as an unknown id, so the handler
+ * emits the same 404 either way and never leaks that a template exists.
+ */
+export function demoRoom(roomId: string): RoomSummary | null {
+  const pair = roomWithFixture(roomId);
+  if (!pair) return null;
+  const summary = roomSummary(pair.room, pair.fixture);
+  return summary.status === "HIDDEN" ? null : summary;
+}
+
+/** Empty message page. `sync_after_seq` is present even with no messages. */
+export function demoRoomMessages(roomId: string): RoomMessagesPage | null {
+  if (!demoRoom(roomId)) return null;
+  return { items: [], next_cursor: null, sync_after_seq: 0 };
+}
+
+/** Empty change page that still reports a cursor, so polling is well-formed. */
+export function demoRoomChanges(roomId: string, afterSeq: number): RoomChangePage | null {
+  if (!demoRoom(roomId)) return null;
+  return { items: [], next_after_seq: afterSeq, has_more: false };
 }
