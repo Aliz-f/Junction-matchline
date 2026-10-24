@@ -114,17 +114,16 @@ Status: delivered against demo fixtures.
 
 ## FE-04 — Match details · G1
 
-Status: **not started.** Route, 404 behaviour and `?tab=` parsing exist; the
-screen does not.
+Status: **done** against demo fixtures.
 
 | | Remaining |
 |---|---|
-| **FE** | Whole screen: header, status/score, source and stale warning, and the Overview / Discuss / Predict / Impact / What-if / Events tabs gated on verified state and capabilities |
-| **FE** | `Not available in this feed` for absent statistics and lineups (component exists, unused) |
-| **FE** | `GET /matches` all-matches browse, independent of a favourite club |
-| **BE** | D7 — `/matches/{id}` is a 501 stub |
-| **BE** | G3 — missing `MatchEvent.description` |
+| **FE** | Discuss / Predict / Impact / What-if panel *contents* — the tabs and their gating are done, the panels are handed to FE-07 / FE-08 / FE-06 / FE-09 |
+| **BE** | D7 — `/matches/{id}` and `/matches` are 501 stubs |
+| **BE** | G3 — missing `MatchEvent.description`; demo mode currently restates kind + player instead |
+| **BE** | G8 — no `SUSPENDED` / `UNKNOWN` fixture, so those header states are untested against real data |
 | **BE** | G1 / G2 as in FE-03 |
+| **JOINT** | Confirm statistics and line-ups really are null from the provider, not dropped in transit |
 
 ## FE-05 — stadium map · G2
 

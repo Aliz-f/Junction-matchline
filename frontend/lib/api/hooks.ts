@@ -14,6 +14,7 @@ import {
   CompetitionSummary,
   JourneyResponse,
   MatchDetail,
+  MatchSummary,
   MetaView,
   TeamSummary,
   Uuid,
@@ -33,6 +34,8 @@ const SessionResponse = z.object({ user: AuthUserResponse.shape.user.nullable() 
 const TeamList = z.object({ items: z.array(TeamSummary) }).strict();
 const CompetitionList = z.object({ items: z.array(CompetitionSummary) }).strict();
 const FavoriteResponse = z.object({ favorite_team_id: Uuid.nullable() }).strict();
+/** A1 page envelope: `{items, next_cursor}`. */
+const MatchPage = z.object({ items: z.array(MatchSummary), next_cursor: z.string().nullable() }).strict();
 
 /**
  * The current session.
@@ -88,6 +91,19 @@ export function useJourney(teamId: string | null, season: number | null): UseQue
     queryFn: () =>
       apiRequest("/journey", JourneyResponse, { query: { team_id: teamId, season } }),
     enabled: Boolean(teamId) && Boolean(season),
+  });
+}
+
+/**
+ * Every fixture, for browsing without a favourite club.
+ *
+ * Takes no team parameter on purpose: this list must not change with the
+ * viewer's favourite.
+ */
+export function useAllMatches(): UseQueryResult<z.infer<typeof MatchPage>> {
+  return useQuery({
+    queryKey: publicKeys.matches(),
+    queryFn: () => apiRequest("/matches", MatchPage),
   });
 }
 

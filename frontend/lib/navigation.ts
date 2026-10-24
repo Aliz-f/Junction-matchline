@@ -11,6 +11,7 @@ export type NavItem = { readonly href: string; readonly label: string; readonly 
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Journey", icon: "journey" },
+  { href: "/matches", label: "All matches", icon: "matches" },
   { href: "/map", label: "Map", icon: "map" },
   { href: "/impact", label: "My Team Impact", icon: "impact" },
   { href: "/community", label: "Community", icon: "community" },
