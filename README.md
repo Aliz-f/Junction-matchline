@@ -6,9 +6,10 @@ predictions, and private multi-turn user-to-AI What-if analysis with evidence an
 uncertainty. Phase 1 targets the English Premier League using clearly labeled
 synthetic demo data; live football data requires confirmed licensing.
 
-This repository currently contains the Phase 0 foundation only. There is no
-application, database, Compose file, installed app dependency set or running
-service. BE-00/FE-00 and G0 have not started.
+The backend contains the BE-01 foundation: a FastAPI contract shell, async
+SQLAlchemy/Alembic configuration, Postgres Compose service, health/meta routes,
+canonical errors, and origin protection. Later feature endpoints remain explicit
+contract stubs until their assigned backend task is implemented.
 
 ## One repository, independent workstreams
 
@@ -111,21 +112,27 @@ frontend worktree under the team's merge policy. Do not invent fixture IDs to
 work around the dependency. A+B+C review G0; only afterward may BE-01/FE-01 start.
 Never let two agents edit the same worktree simultaneously.
 
-## Planned local development (not available yet)
+## Backend local development
 
-Backend requires Python 3.12+, FastAPI/Pydantic 2, async SQLAlchemy, Alembic and
-PostgreSQL 16+. Frontend will use Next.js App Router, strict TypeScript, Tailwind,
-pnpm, Vitest and Playwright. Future local ports are frontend `3000` and API
-`8000`. The browser calls relative `/api/v1` through the Next.js same-origin
-proxy. Model/provider credentials belong only in backend local environment or
-CI secrets; `.env.example` files use safe placeholders. No secrets in frontend
-bundles, logs or snapshots.
+Backend requires Python 3.12+, PostgreSQL 16+, and a local secret file that is
+ignored by Git. Start from `backend/.env.example`, set a local database password,
+then run:
 
-Compose startup, database migrations, `uvicorn`, `pnpm dev`, frontend lint/type
-checks and application tests are **planned commands**, to be documented by their
-owners after the relevant scaffolds exist. No dependency installation is part
-of this bootstrap. The live remote-model acceptance test is BLOCKED without
-credentials, even if offline scripted tests pass.
+```sh
+docker compose up -d postgres
+cd backend
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.lock -e .
+alembic upgrade head
+.venv/bin/uvicorn app.main:app --reload --port 8000
+```
+
+The API is available at `http://localhost:8000/api/v1/health`, with interactive
+documentation at `http://localhost:8000/docs`. Browser writes must supply the
+configured exact `Origin` header; CORS is not relied on for CSRF protection.
+`/api/v1/meta` intentionally reports only implemented capabilities. Remote AI
+credentials stay server-side and its G4 acceptance remains BLOCKED until they
+are provisioned.
 
 See [INTEGRATION_STATUS.md](docs/INTEGRATION_STATUS.md) for actual local evidence
 and [the manual GitHub checklist](docs/TEAM_OWNERSHIP.md#github-setup-checklist-manual-not-configured)
