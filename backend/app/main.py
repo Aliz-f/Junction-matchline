@@ -15,6 +15,7 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.football import router as football_router
 from app.api.v1.profile import router as profile_router
 from app.core.config import Settings, get_settings
 from app.core.errors import (
@@ -27,7 +28,9 @@ from app.core.errors import (
 )
 from app.core.logging import SecretRedactionFilter
 from app.db.session import configure_database
+from app.db.session import get_session
 from app.providers.demo import DemoSportsDataProvider
+from app.services.runtime import runtime_state
 from app.schemas.contract import (
     CompetitionsResponse,
     CompetitionSummary,
@@ -95,12 +98,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return HealthResponse(status="ok", database="ok" if await database_healthy(request) else "degraded")
 
     @app.get("/api/v1/meta", response_model=MetaView, responses=ERRORS)
-    async def meta() -> MetaView:
+    async def meta(session = Depends(get_session)) -> MetaView:
         demo = settings.mode == "DEMO"
-        now = settings.demo_clock_iso if demo else datetime.now(UTC)
-        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
+        now, epoch, revision = await runtime_state(session, settings.demo_clock_iso) if demo else (datetime.now(UTC), None, None)
+        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=epoch, scenario_revision=revision, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
 
     app.include_router(auth_router)
+    app.include_router(football_router)
     app.include_router(profile_router)
 
     provider = DemoSportsDataProvider()
@@ -155,7 +159,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await stub(request)
         app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
 
-    for path in ("/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+    for path in ("/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
         route(path, ["GET"])
     async def body_stub(request: Request) -> JSONResponse:
         return await stub(request)
