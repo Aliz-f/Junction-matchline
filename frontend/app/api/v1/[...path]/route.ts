@@ -24,6 +24,7 @@ import {
   demoMatchdays,
   demoMatches,
   demoMeta,
+  demoStadiumMap,
   demoTeams,
 } from "@/lib/demo/responses";
 import type { ErrorCode } from "@/lib/api/contract";
@@ -101,6 +102,26 @@ export async function GET(
 
     case "/matches":
       return ok(demoMatches());
+
+    case "/map/stadiums": {
+      const date = url.searchParams.get("date");
+      const matchdayRaw = url.searchParams.get("matchday");
+      if ((date === null) === (matchdayRaw === null)) {
+        return fail("INVALID_INPUT", "Supply exactly one of date or matchday", {
+          field: date === null ? "date" : "matchday",
+        });
+      }
+      if (date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return fail("INVALID_INPUT", "date must be YYYY-MM-DD", { field: "date" });
+      }
+      const matchday = matchdayRaw === null ? null : Number(matchdayRaw);
+      if (matchday !== null && (!Number.isInteger(matchday) || matchday < 1)) {
+        return fail("INVALID_INPUT", "matchday must be a positive integer", { field: "matchday" });
+      }
+      const map = demoStadiumMap({ date, matchday });
+      if (!map) return fail("INVALID_INPUT", "Supply exactly one of date or matchday");
+      return ok(map);
+    }
 
     default: {
       // GET /matches/{id}

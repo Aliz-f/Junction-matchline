@@ -16,6 +16,7 @@ import {
   MatchDetail,
   MatchSummary,
   MetaView,
+  StadiumMapResponse,
   TeamSummary,
   Uuid,
 } from "./contract";
@@ -36,6 +37,7 @@ const CompetitionList = z.object({ items: z.array(CompetitionSummary) }).strict(
 const FavoriteResponse = z.object({ favorite_team_id: Uuid.nullable() }).strict();
 /** A1 page envelope: `{items, next_cursor}`. */
 const MatchPage = z.object({ items: z.array(MatchSummary), next_cursor: z.string().nullable() }).strict();
+const MatchdayList = z.object({ items: z.array(z.number().int()) }).strict();
 
 /**
  * The current session.
@@ -104,6 +106,41 @@ export function useAllMatches(): UseQueryResult<z.infer<typeof MatchPage>> {
   return useQuery({
     queryKey: publicKeys.matches(),
     queryFn: () => apiRequest("/matches", MatchPage),
+  });
+}
+
+/**
+ * Stadium map for exactly one selector.
+ *
+ * The caller must pass a `date` OR a `matchday`, never both: the backend
+ * rejects the ambiguous case and the UI must not paper over it.
+ */
+/** Matchdays available for explicit selection on the map. */
+export function useMatchdays(
+  competition: string,
+  season: number | null,
+): UseQueryResult<{ items: number[] }> {
+  return useQuery({
+    queryKey: publicKeys.matchdays(competition, season ?? 0),
+    queryFn: () =>
+      apiRequest(`/competitions/${competition}/matchdays`, MatchdayList, { query: { season } }),
+    enabled: season !== null,
+  });
+}
+
+export function useStadiumMap(
+  selector: { date: string | null; matchday: number | null },
+): UseQueryResult<z.infer<typeof StadiumMapResponse>> {
+  const { date, matchday } = selector;
+  const exactlyOne = (date === null) !== (matchday === null);
+
+  return useQuery({
+    queryKey: publicKeys.stadiumMap(date, matchday),
+    queryFn: () =>
+      apiRequest("/map/stadiums", StadiumMapResponse, {
+        query: date !== null ? { date } : { matchday },
+      }),
+    enabled: exactlyOne,
   });
 }
 

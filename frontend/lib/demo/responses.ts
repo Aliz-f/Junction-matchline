@@ -18,11 +18,12 @@
 import { ERROR_STATUS, type ErrorCode } from "@/lib/api/contract";
 import { competitionSummary, manifest, seasonMatchdays, teamSummaries } from "@/mocks/fixtures";
 import type { DemoManifest } from "@/mocks/fixtures";
-import type { JourneyResponse } from "@/lib/api/contract";
+import type { JourneyResponse, StadiumMapResponse } from "@/lib/api/contract";
 import type { z } from "zod";
 import type {
   CompetitionSummary,
   ErrorEnvelope,
+  Illumination,
   HealthResponse,
   MatchDetail,
   MatchSummary,
@@ -260,5 +261,120 @@ export function demoMatchDetail(matchId: string): MatchDetail | null {
     statistics: null,
     lineups: null,
     data_capabilities: fixture.capabilities,
+  };
+}
+
+// Stadium map -----------------------------------------------------------------
+//
+// `illumination_state` is a backend aggregate, so demo mode computes it as a
+// STAND-IN. The per-state meanings are the spec's (frontend spec FE-05):
+//
+//   LIVE                   a match is in play
+//   UNKNOWN                unusable state, incl. overdue still-SCHEDULED
+//   POSTPONED_OR_CANCELLED a selected fixture has no result
+//   UPCOMING_ROUND         a future SCHEDULED fixture
+//   COMPLETED              selected fixtures have finished
+//   INACTIVE               no selected fixture at this venue
+//
+// The PRECEDENCE between them when one venue hosts several selected fixtures is
+// not specified, so the order above is a demo-mode choice, not a frozen
+// contract decision. The real backend owns it.
+
+/** Europe/London calendar date for a UTC instant, used by the date selector. */
+export function londonCalendarDate(utc: string): string {
+  // `en-CA` yields YYYY-MM-DD, which is the A1 CivilDate shape.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(utc));
+}
+
+function aggregateIllumination(fixtures: readonly ManifestFixture[]): Illumination {
+  if (fixtures.length === 0) return "INACTIVE";
+
+  const now = Date.parse(manifest.demo_clock);
+  const overdue = (f: ManifestFixture) =>
+    f.status === "SCHEDULED" && Date.parse(f.kickoff_at) <= now;
+
+  if (fixtures.some((f) => f.status === "LIVE" || f.status === "HALFTIME")) return "LIVE";
+  if (fixtures.some((f) => f.status === "UNKNOWN" || overdue(f))) return "UNKNOWN";
+  if (fixtures.some((f) => f.status === "POSTPONED" || f.status === "CANCELLED")) {
+    return "POSTPONED_OR_CANCELLED";
+  }
+  if (fixtures.some((f) => f.status === "SCHEDULED")) return "UPCOMING_ROUND";
+  if (fixtures.some((f) => f.status === "FINISHED" || f.status === "SUSPENDED")) return "COMPLETED";
+  return "UNKNOWN";
+}
+
+export type MapSelector = { readonly date?: string | null; readonly matchday?: number | null };
+
+/**
+ * Stadium map for exactly one selector.
+ *
+ * Returns null when both or neither selector is supplied: A1 allows `date` OR
+ * `matchday`, and guessing one would hide the caller's mistake.
+ *
+ * Every coordinate-verified venue is returned, including those with no selected
+ * fixture (INACTIVE), because `home_team_ids` still drives the favourite-home
+ * outline there. Fixtures whose venue is missing or unverified are returned in
+ * `unmapped_matches` rather than being dropped or given a placeholder location.
+ */
+export function demoStadiumMap(selector: MapSelector): z.infer<typeof StadiumMapResponse> | null {
+  const hasDate = typeof selector.date === "string" && selector.date.length > 0;
+  const hasMatchday = typeof selector.matchday === "number";
+  if (hasDate === hasMatchday) return null;
+
+  const selected = manifest.fixtures.filter((fixture) =>
+    hasDate
+      ? londonCalendarDate(fixture.kickoff_at) === selector.date
+      : fixture.matchday === selector.matchday,
+  );
+
+  const verifiedVenues = manifest.venues.filter((venue) => venue.coord_verified);
+
+  const stadiums = verifiedVenues.map((venue) => {
+    const fixtures = chronological(selected.filter((fixture) => fixture.venue_id === venue.id));
+    return {
+      venue_id: venue.id,
+      name: venue.name,
+      lat: venue.lat,
+      lng: venue.lng,
+      coord_verified: true as const,
+      home_team_ids: venue.home_team_ids,
+      illumination_state: aggregateIllumination(fixtures),
+      fixtures: fixtures.map((fixture) => ({ match: matchSummary(fixture) })),
+    };
+  });
+
+  const unmapped = chronological(
+    selected.filter((fixture) => {
+      if (!fixture.venue_id) return true;
+      const venue = manifest.venues.find((candidate) => candidate.id === fixture.venue_id);
+      return !venue || !venue.coord_verified;
+    }),
+  ).map((fixture) => {
+    const venue = fixture.venue_id
+      ? manifest.venues.find((candidate) => candidate.id === fixture.venue_id)
+      : undefined;
+    return {
+      match: matchSummary(fixture),
+      reason: (venue && !venue.coord_verified
+        ? "VENUE_COORDINATES_UNVERIFIED"
+        : "VENUE_MISSING") as "VENUE_MISSING" | "VENUE_COORDINATES_UNVERIFIED",
+    };
+  });
+
+  return {
+    competition: manifest.competition.code,
+    season_start_year: manifest.competition.season_start_year,
+    selected: {
+      matchday: hasMatchday ? (selector.matchday ?? null) : null,
+      date: hasDate ? (selector.date ?? null) : null,
+    },
+    stadiums,
+    unmapped_matches: unmapped,
+    source: demoSource(),
   };
 }

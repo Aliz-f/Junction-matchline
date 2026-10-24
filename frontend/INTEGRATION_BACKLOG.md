@@ -127,19 +127,16 @@ Status: **done** against demo fixtures.
 
 ## FE-05 — stadium map · G2
 
-Status: **not started.**
+Status: **done** against demo fixtures.
 
 | | Remaining |
 |---|---|
-| **FE** | Leaflet client-only map, England-centred, verified coordinates only, OSM attribution |
-| **FE** | Accessible fixture list that still works when tiles fail |
-| **FE** | `illumination_state` visuals from the backend aggregate only, never browser time |
-| **FE** | Multi-fixture venue popups with distinct fixture IDs and links |
-| **FE** | `unmapped_matches` as `Location unavailable` |
-| **FE** | Default date from `/meta.server_now_utc` converted to Europe/London; exactly one of `date` or `matchday` sent |
-| **FE** | Favourite-home outline from `home_team_ids`, including venues with zero fixtures |
-| **BE** | D7 — `/map/stadiums` and `/impact/relevant` are 501 stubs |
-| **JOINT** | CT-15 (no favourite), CT-02–CT-05 (selector rules, DST boundaries) |
+| **FE** | Impact overlays on the map (HIGH/MEDIUM/LOW indicators from all `/impact/relevant` pages) — belongs with FE-06, which owns that endpoint |
+| **FE** | Consented guest-favourite import from the map itself; it currently points the viewer at the Journey to do it |
+| **BE** | D7 — `/map/stadiums` is a 501 stub; `illumination_state` must come from the backend, not demo mode's stand-in aggregation |
+| **BE** | Precedence between illumination states for a venue hosting several selected fixtures is unspecified — demo mode picked one and the backend owns the real rule |
+| **BE** | No fixture has an unverified-coordinate venue, so `VENUE_COORDINATES_UNVERIFIED` is untested against real data |
+| **JOINT** | CT-02–CT-05 selector/subset rules and the CT-15 no-favourite path, against the real backend |
 
 ## FE-06 — Impact and standings · G2
 
