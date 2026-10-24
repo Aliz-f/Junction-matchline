@@ -214,6 +214,41 @@ class MatchDetail(MatchSummary):
     data_capabilities: dict[Literal["events", "lineups", "player_stats"], bool]
 
 
+class JourneyResponse(ContractModel):
+    items: list[MatchSummary]
+    team_id: UUID
+    season_start_year: int
+
+
+class StadiumFixture(ContractModel):
+    match: MatchSummary
+
+
+class StadiumVenue(ContractModel):
+    venue_id: UUID
+    name: str
+    lat: float
+    lng: float
+    coord_verified: Literal[True]
+    home_team_ids: list[UUID]
+    illumination_state: Literal["UPCOMING_ROUND", "LIVE", "COMPLETED", "INACTIVE", "POSTPONED_OR_CANCELLED", "UNKNOWN"]
+    fixtures: list[StadiumFixture]
+
+
+class UnmappedMatch(ContractModel):
+    match: MatchSummary
+    reason: Literal["VENUE_MISSING", "VENUE_COORDINATES_UNVERIFIED"]
+
+
+class StadiumMapResponse(ContractModel):
+    competition: str
+    season_start_year: int
+    selected: dict[str, int | str | None]
+    stadiums: list[StadiumVenue]
+    unmapped_matches: list[UnmappedMatch]
+    source: SourceView
+
+
 class Page(ContractModel):
     items: list[Any]
     next_cursor: str | None

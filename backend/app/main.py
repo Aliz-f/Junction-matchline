@@ -7,14 +7,16 @@ from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import uuid4
 
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.football import router as football_router
 from app.api.v1.profile import router as profile_router
 from app.core.config import Settings, get_settings
 from app.core.errors import (
@@ -26,7 +28,7 @@ from app.core.errors import (
     validation_error_handler,
 )
 from app.core.logging import SecretRedactionFilter
-from app.db.session import configure_database
+from app.db.session import configure_database, get_session
 from app.providers.demo import DemoSportsDataProvider
 from app.schemas.contract import (
     CompetitionsResponse,
@@ -45,6 +47,8 @@ from app.schemas.contract import (
     WhatifMessageRequest,
     WhatifThreadRequest,
 )
+from app.services.demo_football import persisted_manifest
+from app.services.runtime import runtime_state
 
 ERRORS: dict[int | str, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
@@ -95,22 +99,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return HealthResponse(status="ok", database="ok" if await database_healthy(request) else "degraded")
 
     @app.get("/api/v1/meta", response_model=MetaView, responses=ERRORS)
-    async def meta() -> MetaView:
+    async def meta(session: AsyncSession = Depends(get_session)) -> MetaView:
         demo = settings.mode == "DEMO"
-        now = settings.demo_clock_iso if demo else datetime.now(UTC)
-        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
+        now, epoch, revision = await runtime_state(session, settings.demo_clock_iso) if demo else (datetime.now(UTC), None, None)
+        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=epoch, scenario_revision=revision, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
 
     app.include_router(auth_router)
+    app.include_router(football_router)
     app.include_router(profile_router)
 
     provider = DemoSportsDataProvider()
 
-    async def season_data() -> dict[str, object]:
-        return await provider.normalized_season("PL", 2026)
+    async def season_data(session: AsyncSession) -> dict[str, Any]:
+        return await persisted_manifest(session) or await provider.normalized_season("PL", 2026)
 
     @app.get("/api/v1/competitions", response_model=CompetitionsResponse, responses=ERRORS)
-    async def competitions() -> CompetitionsResponse:
-        data = await season_data()
+    async def competitions(session: AsyncSession = Depends(get_session)) -> CompetitionsResponse:
+        data = await season_data(session)
         competition = data["competition"]
         assert isinstance(competition, dict)
         return CompetitionsResponse(
@@ -126,8 +131,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.get("/api/v1/teams", response_model=TeamsResponse, responses=ERRORS)
-    async def teams(competition: str = Query(...)) -> TeamsResponse:
-        data = await season_data()
+    async def teams(
+        competition: str = Query(...), session: AsyncSession = Depends(get_session)
+    ) -> TeamsResponse:
+        data = await season_data(session)
         competition_data = data["competition"]
         assert isinstance(competition_data, dict)
         if competition != competition_data["code"]:
@@ -137,8 +144,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return TeamsResponse(items=sorted((TeamSummary(crest_url=None, **team) for team in raw_teams), key=lambda team: team.name))
 
     @app.get("/api/v1/competitions/{code}/matchdays", response_model=MatchdaysResponse, responses=ERRORS)
-    async def matchdays(code: str, season: int = Query(...)) -> MatchdaysResponse:
-        data = await season_data()
+    async def matchdays(
+        code: str, season: int = Query(...), session: AsyncSession = Depends(get_session)
+    ) -> MatchdaysResponse:
+        data = await season_data(session)
         competition_data = data["competition"]
         assert isinstance(competition_data, dict)
         if code != competition_data["code"] or season != competition_data["season_start_year"]:
@@ -155,7 +164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await stub(request)
         app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
 
-    for path in ("/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+    for path in ("/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
         route(path, ["GET"])
     async def body_stub(request: Request) -> JSONResponse:
         return await stub(request)
