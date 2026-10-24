@@ -1,24 +1,38 @@
-"""Pre-G0 importable FastAPI route catalogue.
-
-Handlers are intentional 501 stubs; the frozen path/method/request contract is
-available to FE-00 without pretending later feature work has been completed.
-"""
+"""Matchline ASGI application factory for the BE-01 foundation."""
 
 from __future__ import annotations
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+import logging
+from datetime import UTC, datetime
+from uuid import uuid4
 
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.api.v1.auth import router as auth_router
+from app.core.config import Settings, get_settings
+from app.core.errors import (
+    ApiError,
+    api_error_handler,
+    error_response,
+    http_error_handler,
+    unexpected_error_handler,
+    validation_error_handler,
+)
+from app.core.logging import SecretRedactionFilter
+from app.db.session import configure_database
 from app.schemas.contract import (
-    AuthUserResponse,
     ErrorEnvelope,
     FavoriteRequest,
     FavoriteResponse,
     HealthResponse,
-    LoginRequest,
+    MetaCapabilities,
     MetaView,
     PredictionRequest,
-    RegisterRequest,
     ReportRequest,
     RoomCreateRequest,
     RoomMessageRequest,
@@ -26,118 +40,105 @@ from app.schemas.contract import (
     WhatifThreadRequest,
 )
 
-app = FastAPI(title="Matchline API", version="0.0.0-be00", openapi_url="/openapi.json")
-
-ERRORS = {501: {"model": ErrorEnvelope, "description": "BE-00 route stub"}}
+ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 501: {"model": ErrorEnvelope}}
 
 
-def stub() -> JSONResponse:
-    return JSONResponse(
-        status_code=501,
-        content={
-            "error": {
-                "code": "NOT_IMPLEMENTED",
-                "message": "BE-00 contract stub",
-                "details": {},
-                "request_id": "be00",
-            }
-        },
-    )
+def utc_z(value: datetime) -> str:
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
-def route(path: str, methods: list[str], response_model: type | None = None) -> None:
-    async def handler() -> JSONResponse:
-        return stub()
-
-    app.add_api_route(
-        path,
-        handler,
-        methods=methods,
-        response_model=response_model,
-        responses=ERRORS,
-        name=f"be00_{'_'.join(methods).lower()}_{path.replace('/', '_')}",
-    )
+async def database_healthy(request: Request) -> bool:
+    try:
+        async with request.app.state.db_engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+    except Exception:
+        return False
+    return True
 
 
-route("/api/v1/health", ["GET"], HealthResponse)
-route("/api/v1/meta", ["GET"], MetaView)
-route("/api/v1/auth/me", ["GET"], AuthUserResponse)
-route("/api/v1/auth/logout", ["POST"])
-for path in (
-    "/api/v1/competitions",
-    "/api/v1/teams",
-    "/api/v1/competitions/{code}/matchdays",
-    "/api/v1/journey",
-    "/api/v1/matches",
-    "/api/v1/matches/{id}",
-    "/api/v1/map/stadiums",
-    "/api/v1/standings",
-    "/api/v1/matches/{id}/impact",
-    "/api/v1/impact/relevant",
-    "/api/v1/matches/{id}/rooms",
-    "/api/v1/rooms",
-    "/api/v1/rooms/{id}",
-    "/api/v1/rooms/{id}/messages",
-    "/api/v1/rooms/{id}/changes",
-    "/api/v1/matches/{id}/predictions/me",
-    "/api/v1/matches/{id}/leaderboard",
-    "/api/v1/matches/{id}/whatif/threads",
-    "/api/v1/users/me/whatif/threads",
-    "/api/v1/whatif/threads/{thread_id}",
-    "/api/v1/users/me/profile",
-    "/api/v1/users/me/badges",
-    "/api/v1/users/me/predictions",
-):
-    route(path, ["GET"])
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
+    app = FastAPI(title="Matchline API", version="0.1.0", openapi_url="/openapi.json")
+    app.state.settings = settings
+    logging.getLogger("matchline").addFilter(SecretRedactionFilter())
+    configure_database(app, settings.database_url)
+    app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "OPTIONS"], allow_headers=["Content-Type", "Idempotency-Key"])
+
+    @app.middleware("http")
+    async def request_context_and_origin_policy(request: Request, call_next: object) -> object:
+        request.state.request_id = str(uuid4())
+        if request.url.path.startswith("/api/v1/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            origin = request.headers.get("origin", "").rstrip("/")
+            if origin not in settings.allowed_origins:
+                return error_response(request, 403, "CSRF_ORIGIN_INVALID", "Request Origin is not allowed")
+        response = await call_next(request)  # type: ignore[operator]
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
+
+    app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(StarletteHTTPException, http_error_handler)
+    app.add_exception_handler(Exception, unexpected_error_handler)
+
+    @app.get("/api/v1/health", response_model=HealthResponse, responses=ERRORS)
+    @app.get("/health", response_model=HealthResponse, include_in_schema=False)
+    async def health(request: Request) -> HealthResponse:
+        return HealthResponse(status="ok", database="ok" if await database_healthy(request) else "degraded")
+
+    @app.get("/api/v1/meta", response_model=MetaView, responses=ERRORS)
+    async def meta() -> MetaView:
+        demo = settings.mode == "DEMO"
+        now = settings.demo_clock_iso if demo else datetime.now(UTC)
+        return MetaView(mode=settings.mode, default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
+
+    app.include_router(auth_router)
+
+    async def stub(request: Request) -> JSONResponse:
+        return error_response(request, 501, "NOT_IMPLEMENTED", "This Phase 1 endpoint is not implemented yet")
+
+    def route(path: str, methods: list[str], response_model: type | None = None) -> None:
+        async def handler(request: Request) -> JSONResponse:
+            return await stub(request)
+        app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
+
+    for path in ("/api/v1/competitions", "/api/v1/teams", "/api/v1/competitions/{code}/matchdays", "/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/profile", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+        route(path, ["GET"])
+    async def body_stub(request: Request) -> JSONResponse:
+        return await stub(request)
+
+    @app.put("/api/v1/users/me/favorite-team", response_model=FavoriteResponse, responses=ERRORS)
+    async def favorite_stub(_: FavoriteRequest, request: Request) -> JSONResponse:
+        return await body_stub(request)
+
+    @app.post("/api/v1/matches/{id}/rooms", responses=ERRORS)
+    async def room_stub(id: str, _: RoomCreateRequest, request: Request) -> JSONResponse:
+        del id
+        return await body_stub(request)
+
+    @app.post("/api/v1/rooms/{id}/messages", responses=ERRORS)
+    async def room_message_stub(id: str, _: RoomMessageRequest, request: Request) -> JSONResponse:
+        del id
+        return await body_stub(request)
+
+    @app.post("/api/v1/reports", responses=ERRORS)
+    async def report_stub(_: ReportRequest, request: Request) -> JSONResponse:
+        return await body_stub(request)
+
+    @app.post("/api/v1/matches/{id}/predictions", responses=ERRORS)
+    async def prediction_stub(id: str, _: PredictionRequest, request: Request) -> JSONResponse:
+        del id
+        return await body_stub(request)
+
+    @app.post("/api/v1/matches/{id}/whatif/threads", responses=ERRORS)
+    async def whatif_thread_stub(id: str, _: WhatifThreadRequest, request: Request) -> JSONResponse:
+        del id
+        return await body_stub(request)
+
+    @app.post("/api/v1/whatif/threads/{thread_id}/messages", responses=ERRORS)
+    async def whatif_message_stub(thread_id: str, _: WhatifMessageRequest, request: Request) -> JSONResponse:
+        del thread_id
+        return await body_stub(request)
+    return app
 
 
-@app.post("/api/v1/auth/register", response_model=AuthUserResponse, responses=ERRORS)
-async def register(_: RegisterRequest) -> JSONResponse:
-    return stub()
-
-
-@app.post("/api/v1/auth/login", response_model=AuthUserResponse, responses=ERRORS)
-async def login(_: LoginRequest) -> JSONResponse:
-    return stub()
-
-
-@app.put(
-    "/api/v1/users/me/favorite-team", response_model=FavoriteResponse, responses=ERRORS
-)
-async def put_favorite(_: FavoriteRequest) -> JSONResponse:
-    return stub()
-
-
-@app.post("/api/v1/matches/{id}/rooms", responses=ERRORS)
-async def create_room(id: str, _: RoomCreateRequest) -> JSONResponse:
-    del id
-    return stub()
-
-
-@app.post("/api/v1/rooms/{id}/messages", responses=ERRORS)
-async def post_room_message(id: str, _: RoomMessageRequest) -> JSONResponse:
-    del id
-    return stub()
-
-
-@app.post("/api/v1/reports", responses=ERRORS)
-async def report(_: ReportRequest) -> JSONResponse:
-    return stub()
-
-
-@app.post("/api/v1/matches/{id}/predictions", responses=ERRORS)
-async def predict(id: str, _: PredictionRequest) -> JSONResponse:
-    del id
-    return stub()
-
-
-@app.post("/api/v1/matches/{id}/whatif/threads", responses=ERRORS)
-async def create_whatif_thread(id: str, _: WhatifThreadRequest) -> JSONResponse:
-    del id
-    return stub()
-
-
-@app.post("/api/v1/whatif/threads/{thread_id}/messages", responses=ERRORS)
-async def post_whatif_message(thread_id: str, _: WhatifMessageRequest) -> JSONResponse:
-    del thread_id
-    return stub()
+app = create_app()
