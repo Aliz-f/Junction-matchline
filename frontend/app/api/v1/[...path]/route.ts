@@ -19,7 +19,10 @@ import {
   demoCompetitions,
   demoErrorEnvelope,
   demoHealth,
+  demoJourney,
+  demoMatchDetail,
   demoMatchdays,
+  demoMatches,
   demoMeta,
   demoTeams,
 } from "@/lib/demo/responses";
@@ -82,7 +85,31 @@ export async function GET(
       return ok(demoTeams());
     }
 
+    case "/journey": {
+      const teamId = url.searchParams.get("team_id");
+      const season = url.searchParams.get("season");
+      if (!teamId) return fail("INVALID_INPUT", "team_id is required", { field: "team_id" });
+      if (!season || !/^\d{4}$/.test(season)) {
+        return fail("INVALID_INPUT", "season must be a four-digit year", { field: "season" });
+      }
+      const journey = demoJourney(teamId, Number(season));
+      // An unknown team or an out-of-range season is a 404, not an empty path:
+      // an empty list would imply "this team genuinely has no fixtures".
+      if (!journey) return fail("NOT_FOUND", "No journey for that team and season");
+      return ok(journey);
+    }
+
+    case "/matches":
+      return ok(demoMatches());
+
     default: {
+      // GET /matches/{id}
+      if (path.length === 2 && path[0] === "matches") {
+        const detail = demoMatchDetail(path[1] ?? "");
+        if (!detail) return fail("NOT_FOUND", "Match not found");
+        return ok(detail);
+      }
+
       // GET /competitions/{code}/matchdays?season=YYYY
       if (path.length === 3 && path[0] === "competitions" && path[2] === "matchdays") {
         if (path[1] !== DEMO_COMPETITION_CODE) return fail("NOT_FOUND", "Competition not found");
