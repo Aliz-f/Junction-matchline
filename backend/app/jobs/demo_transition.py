@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.db.football_models import Match, RuntimeState
 from app.db.session import configure_database
+from app.seed.demo_accounts import seed_demo_accounts
 from app.seed.loader import load_demo_manifest, scenario_data
 from app.seed.service import seed_demo
 from app.services.demo_transition_hooks import (
@@ -65,6 +66,8 @@ async def apply_scenario(name: str, hook: DemoTransitionHook | None = None) -> N
     configure_database(holder, settings.database_url)
     async with holder.state.session_factory() as session:
         await apply_scenario_to_session(session, name, hook=hook)
+        if name == "baseline":
+            await seed_demo_accounts(session, settings)
         await session.commit()
 
 
