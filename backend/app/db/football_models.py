@@ -88,7 +88,7 @@ class Match(Base):
     capabilities: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     __table_args__ = (
         UniqueConstraint("provider", "provider_id"),
-        CheckConstraint("home_team_id <> away_team_id"),
+        CheckConstraint("home_team_id <> away_team_id", name="ck_matches_distinct_teams"),
         CheckConstraint(
             "(status IN ('SCHEDULED', 'POSTPONED', 'CANCELLED', 'SUSPENDED', 'UNKNOWN') "
             "AND home_score IS NULL AND away_score IS NULL) OR "
@@ -183,7 +183,10 @@ class PredictionRecord(Base):
     points: Mapped[int | None]
     __table_args__ = (
         UniqueConstraint("match_id", "user_id"),
-        CheckConstraint("(home_score IS NULL AND away_score IS NULL) OR (home_score >= 0 AND away_score >= 0)"),
+        CheckConstraint(
+            "(home_score IS NULL AND away_score IS NULL) OR (home_score >= 0 AND away_score >= 0)",
+            name="ck_predictions_score_pair",
+        ),
         CheckConstraint(
             "(home_score IS NULL AND away_score IS NULL) OR "
             "(outcome = 'HOME' AND home_score > away_score) OR "
@@ -245,6 +248,7 @@ class WhatifThreadRecord(Base):
     title: Mapped[str | None] = mapped_column(String(200))
     visibility: Mapped[str] = mapped_column(String(16), default="PRIVATE")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
 
 
 class WhatifMessageRecord(Base):
@@ -265,12 +269,23 @@ class WhatifRequestRecord(Base):
     thread_id: Mapped[str] = mapped_column(ForeignKey("whatif_threads.id"), index=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     idempotency_key: Mapped[str] = mapped_column(String(36))
+    client_message_id: Mapped[str] = mapped_column(String(36))
     request_hash: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(16), default="PENDING")
     reservation_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    quota_day_utc: Mapped[str | None] = mapped_column(String(10))
+    lease_owner_id: Mapped[str | None] = mapped_column(String(36))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    quota_charged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     response_status: Mapped[int | None] = mapped_column(Integer)
     response_snapshot_json: Mapped[dict[str, object] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    __table_args__ = (UniqueConstraint("thread_id", "idempotency_key"),)
+    __table_args__ = (
+        UniqueConstraint("thread_id", "idempotency_key"),
+        UniqueConstraint("thread_id", "client_message_id"),
+    )
 
 
 class AiDailyQuotaRecord(Base):
