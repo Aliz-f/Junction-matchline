@@ -83,21 +83,17 @@ return 200. See the comment in `lib/demo/mode.ts`.
 
 ## FE-02 — API client, auth, team onboarding · G1
 
-Status: **partial.** Data layer done; auth UI not wired.
+Status: **done**, except the two items below. Auth is now wired end to end: real
+login and register forms, header session controls with sign-out, validated
+return-to paths, and cache eviction on identity change.
 
 | | Remaining |
 |---|---|
-| **FE** | Wire `useLogin` / `useRegister` / `useLogout` into the login and register forms (hooks exist, forms still inert) |
-| **FE** | Header session UI: show the signed-in user, add sign-out |
-| **FE** | Safe return-to path after an unauthorised write prompts sign-in |
-| **FE** | Expand MSW handlers to every endpoint the pages now use (currently the FE-00 frozen set only; demo route handlers were extended instead) |
-| **FE** | FE-G0.4: `openapi-typescript` codegen to replace the hand-maintained `lib/api/types.ts`, failing CI on drift |
-| **FE** | Wire `/meta.scenario_revision` + `demo_epoch` change to cache invalidation |
-| **BE** | **B1** — until fixed there is no reachable signed-in state at all |
-| **BE** | G4, so a real `display_name` / `role` can be rendered |
-| **SECRET** | BE-03 local-only FREE and PREMIUM credentials, out of band, for G2 |
-| **JOINT** | Real browser cookie + Origin test through the proxy (register 201 / login 200 / logout 204 / guest 200) |
-| **JOINT** | CT-08 and CT-12 verification across PREMIUM → FREE → guest switches — needs rooms and private data to exist |
+| **FE** | Expand MSW handlers to every endpoint the pages now use. The demo route handlers were extended instead, so `mocks/handlers.ts` is still the FE-00 frozen set |
+| **FE** | FE-G0.4 `openapi-typescript` codegen to replace the hand-maintained `lib/api/types.ts`, failing CI on drift. Blocked on a conforming backend `/openapi.json` (D1–D4) |
+| **BE** | **B1** — the forms are real but no session can be established until authenticated requests work. Every submit currently ends at the backend's 500 or demo mode's 401 |
+| **SECRET** | BE-03 FREE and PREMIUM credentials, out of band, for G2 |
+| **JOINT** | Real browser cookie + Origin test through the proxy (register 201 / login 200 / logout 204 / guest 200); CT-08 and CT-12 across PREMIUM → FREE → guest switches |
 
 ## FE-03 — Match Journey · G1
 

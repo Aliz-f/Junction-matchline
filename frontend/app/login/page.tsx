@@ -1,14 +1,20 @@
-/** Sign in (FE-02 wires the session) — FE-01 shell only. */
+/** Sign in (FE-02). */
 import { PageHeading } from "@/components/ui/PageHeading";
-import { AuthFormShell } from "@/components/ui/AuthFormShell";
+import { AuthForm } from "@/components/ui/AuthForm";
 
 export const metadata = { title: "Sign in" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const next = (await searchParams).next;
+
   return (
     <>
       <PageHeading title="Sign in" description="Sessions are cookie-backed and set by the backend." />
-      <AuthFormShell kind="login" />
+      <AuthForm kind="login" next={Array.isArray(next) ? (next[0] ?? null) : (next ?? null)} />
     </>
   );
 }
