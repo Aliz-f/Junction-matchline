@@ -137,6 +137,18 @@ class CompetitionSummary(ContractModel):
     country_code: str
 
 
+class CompetitionsResponse(ContractModel):
+    items: list[CompetitionSummary]
+
+
+class TeamsResponse(ContractModel):
+    items: list[TeamSummary]
+
+
+class MatchdaysResponse(ContractModel):
+    items: list[int]
+
+
 class VenueSummary(ContractModel):
     id: UUID
     name: str

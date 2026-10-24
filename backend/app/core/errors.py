@@ -20,7 +20,7 @@ class ApiError(Exception):
 
 
 def error_response(request: Request, status_code: int, code: str, message: str, details: dict[str, Any] | None = None) -> JSONResponse:
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status_code,
         content={
             "error": {
@@ -31,6 +31,10 @@ def error_response(request: Request, status_code: int, code: str, message: str, 
             }
         },
     )
+    if request.url.path.startswith("/api/v1/"):
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["Vary"] = "Cookie"
+    return response
 
 
 async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
