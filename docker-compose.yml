@@ -4,7 +4,8 @@ services:
     environment:
       POSTGRES_DB: matchline
       POSTGRES_USER: matchline
-      POSTGRES_PASSWORD: ${MATCHLINE_POSTGRES_PASSWORD:?set in local .env}
+      # Empty only for `docker compose build`; PostgreSQL rejects it on startup.
+      POSTGRES_PASSWORD: ${MATCHLINE_POSTGRES_PASSWORD:-}
     ports:
       - "5432:5432"
     healthcheck:
@@ -18,7 +19,7 @@ services:
     build:
       context: ./backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://matchline:${MATCHLINE_POSTGRES_PASSWORD:?set in local .env}@postgres:5432/matchline
+      DATABASE_URL: postgresql+asyncpg://matchline:${MATCHLINE_POSTGRES_PASSWORD:-}@postgres:5432/matchline
       CORS_ALLOWED_ORIGINS: http://localhost:3000
     ports:
       - "8000:8000"
