@@ -249,6 +249,65 @@ class StadiumMapResponse(ContractModel):
     source: SourceView
 
 
+class StandingsRow(ContractModel):
+    team_id: UUID
+    position: int | None
+    played: int
+    won: int
+    drawn: int
+    lost: int
+    goals_for: int
+    goals_against: int
+    goal_difference: int
+    points: int
+
+
+class StandingsResponse(ContractModel):
+    competition: str
+    season_start_year: int
+    snapshot_id: UUID
+    as_of: Utc
+    source: SourceView
+    rows: list[StandingsRow]
+
+
+class GapEffect(ContractModel):
+    affected_team_id: UUID
+    gap_before: int
+    gap_after: int
+    gap_delta: int
+    # This is always the favourite's movement: rank before minus rank after.
+    position_change: int | None
+    position_note: str | None
+
+
+class ImpactScenario(ContractModel):
+    outcome: Outcome
+    is_hypothetical: bool
+    effects: list[GapEffect]
+
+
+class SourceReference(ContractModel):
+    ref: str
+    label: str
+
+
+class ImpactInsight(ContractModel):
+    match_id: UUID
+    match: MatchSummary
+    favorite_team_id: UUID
+    relevance: Literal["HIGH", "MEDIUM", "LOW", "NONE", "UNKNOWN"]
+    basis: Literal["POINTS_GAP", "NONE", "INSUFFICIENT_DATA"]
+    data_version: str | None
+    verified_at: Utc | None
+    actual_outcome: Outcome | None
+    scenarios: list[ImpactScenario]
+    summary: str
+    summary_type: Literal["TEMPLATE", "AI_EXPLANATION"]
+    caveats: list[str]
+    sources: list[SourceReference]
+
+
 class Page(ContractModel):
     items: list[Any]
     next_cursor: str | None
