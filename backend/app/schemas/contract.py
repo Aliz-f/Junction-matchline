@@ -351,6 +351,42 @@ class PredictionRequest(ContractModel):
         return self
 
 
+class PredictionBreakdown(ContractModel):
+    outcome_points: int
+    exact_score_points: int
+
+
+class PredictionView(ContractModel):
+    id: UUID
+    match_id: UUID
+    outcome: Outcome
+    home_score: int | None
+    away_score: int | None
+    created_at: Utc
+    submitted_at: Utc
+    locked_at: Utc | None
+    status: PredictionStatus
+    points: int | None
+    breakdown: PredictionBreakdown | None
+
+
+class PredictionMineResponse(ContractModel):
+    prediction: PredictionView | None
+
+
+class PredictionHistoryItem(ContractModel):
+    prediction: PredictionView
+    match: MatchSummary
+
+
+class LeaderboardEntry(ContractModel):
+    user_id: UUID
+    display_name: str
+    points: int
+    rank: int
+    public_badges: list[BadgeView]
+
+
 class RoomCreateRequest(ContractModel):
     title: str
     kind: RoomKind
