@@ -1,0 +1,1698 @@
+{
+  "components": {
+    "schemas": {
+      "AuthUserResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserPublic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "title": "AuthUserResponse",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details",
+          "request_id"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "FavoriteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id"
+        ],
+        "title": "FavoriteRequest",
+        "type": "object"
+      },
+      "FavoriteResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "favorite_team_id": {
+            "format": "uuid",
+            "title": "Favorite Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "favorite_team_id"
+        ],
+        "title": "FavoriteResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "database": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Database",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "MetaCapabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "title": "Events",
+            "type": "boolean"
+          },
+          "live_updates": {
+            "title": "Live Updates",
+            "type": "boolean"
+          },
+          "whatif_sharing": {
+            "const": false,
+            "default": false,
+            "title": "Whatif Sharing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "events",
+          "live_updates"
+        ],
+        "title": "MetaCapabilities",
+        "type": "object"
+      },
+      "MetaView": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/MetaCapabilities"
+          },
+          "default_competition": {
+            "const": "PL",
+            "title": "Default Competition",
+            "type": "string"
+          },
+          "default_season_start_year": {
+            "title": "Default Season Start Year",
+            "type": "integer"
+          },
+          "demo_clock_frozen": {
+            "title": "Demo Clock Frozen",
+            "type": "boolean"
+          },
+          "demo_epoch": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demo Epoch"
+          },
+          "mode": {
+            "enum": [
+              "DEMO",
+              "LIVE"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "scenario_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Revision"
+          },
+          "server_now_utc": {
+            "pattern": "^.+Z$",
+            "title": "Server Now Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "default_competition",
+          "default_season_start_year",
+          "server_now_utc",
+          "demo_clock_frozen",
+          "demo_epoch",
+          "scenario_revision",
+          "capabilities"
+        ],
+        "title": "MetaView",
+        "type": "object"
+      },
+      "Outcome": {
+        "enum": [
+          "HOME",
+          "DRAW",
+          "AWAY"
+        ],
+        "title": "Outcome",
+        "type": "string"
+      },
+      "Plan": {
+        "enum": [
+          "FREE",
+          "PREMIUM"
+        ],
+        "title": "Plan",
+        "type": "string"
+      },
+      "PredictionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "away_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Score"
+          },
+          "home_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Score"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/Outcome"
+          }
+        },
+        "required": [
+          "outcome",
+          "home_score",
+          "away_score"
+        ],
+        "title": "PredictionRequest",
+        "type": "object"
+      },
+      "RegisterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "display_name",
+          "password"
+        ],
+        "title": "RegisterRequest",
+        "type": "object"
+      },
+      "ReportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_kind": {
+            "const": "ROOM_MESSAGE",
+            "title": "Target Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_kind",
+          "target_id",
+          "reason"
+        ],
+        "title": "ReportRequest",
+        "type": "object"
+      },
+      "Role": {
+        "enum": [
+          "USER",
+          "EDITOR"
+        ],
+        "title": "Role",
+        "type": "string"
+      },
+      "RoomCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RoomKind"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "kind"
+        ],
+        "title": "RoomCreateRequest",
+        "type": "object"
+      },
+      "RoomKind": {
+        "enum": [
+          "PRE_MATCH",
+          "POST_MATCH"
+        ],
+        "title": "RoomKind",
+        "type": "string"
+      },
+      "RoomMessageRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "RoomMessageRequest",
+        "type": "object"
+      },
+      "UserPublic": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "favorite_team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favorite Team Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "plan",
+          "role",
+          "favorite_team_id"
+        ],
+        "title": "UserPublic",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WhatifMessageRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_message_id": {
+            "format": "uuid",
+            "title": "Client Message Id",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "client_message_id"
+        ],
+        "title": "WhatifMessageRequest",
+        "type": "object"
+      },
+      "WhatifThreadRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "WhatifThreadRequest",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Matchline API",
+    "version": "0.0.0-be00"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Login"
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "be00_post__api_v1_auth_logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Post  Api V1 Auth Logout"
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "be00_get__api_v1_auth_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Auth Me"
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Register"
+      }
+    },
+    "/api/v1/competitions": {
+      "get": {
+        "operationId": "be00_get__api_v1_competitions_api_v1_competitions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Competitions"
+      }
+    },
+    "/api/v1/competitions/{code}/matchdays": {
+      "get": {
+        "operationId": "be00_get__api_v1_competitions__code__matchdays_api_v1_competitions__code__matchdays_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Competitions {Code} Matchdays"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "be00_get__api_v1_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Health"
+      }
+    },
+    "/api/v1/impact/relevant": {
+      "get": {
+        "operationId": "be00_get__api_v1_impact_relevant_api_v1_impact_relevant_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Impact Relevant"
+      }
+    },
+    "/api/v1/journey": {
+      "get": {
+        "operationId": "be00_get__api_v1_journey_api_v1_journey_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Journey"
+      }
+    },
+    "/api/v1/map/stadiums": {
+      "get": {
+        "operationId": "be00_get__api_v1_map_stadiums_api_v1_map_stadiums_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Map Stadiums"
+      }
+    },
+    "/api/v1/matches": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches_api_v1_matches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches"
+      }
+    },
+    "/api/v1/matches/{id}": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__api_v1_matches__id__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id}"
+      }
+    },
+    "/api/v1/matches/{id}/impact": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__impact_api_v1_matches__id__impact_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id} Impact"
+      }
+    },
+    "/api/v1/matches/{id}/leaderboard": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__leaderboard_api_v1_matches__id__leaderboard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id} Leaderboard"
+      }
+    },
+    "/api/v1/matches/{id}/predictions": {
+      "post": {
+        "operationId": "predict_api_v1_matches__id__predictions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Predict"
+      }
+    },
+    "/api/v1/matches/{id}/predictions/me": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__predictions_me_api_v1_matches__id__predictions_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id} Predictions Me"
+      }
+    },
+    "/api/v1/matches/{id}/rooms": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__rooms_api_v1_matches__id__rooms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id} Rooms"
+      },
+      "post": {
+        "operationId": "create_room_api_v1_matches__id__rooms_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Create Room"
+      }
+    },
+    "/api/v1/matches/{id}/whatif/threads": {
+      "get": {
+        "operationId": "be00_get__api_v1_matches__id__whatif_threads_api_v1_matches__id__whatif_threads_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Matches {Id} Whatif Threads"
+      },
+      "post": {
+        "operationId": "create_whatif_thread_api_v1_matches__id__whatif_threads_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatifThreadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Create Whatif Thread"
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "operationId": "be00_get__api_v1_meta_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Meta"
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "operationId": "report_api_v1_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Report"
+      }
+    },
+    "/api/v1/rooms": {
+      "get": {
+        "operationId": "be00_get__api_v1_rooms_api_v1_rooms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Rooms"
+      }
+    },
+    "/api/v1/rooms/{id}": {
+      "get": {
+        "operationId": "be00_get__api_v1_rooms__id__api_v1_rooms__id__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Rooms {Id}"
+      }
+    },
+    "/api/v1/rooms/{id}/changes": {
+      "get": {
+        "operationId": "be00_get__api_v1_rooms__id__changes_api_v1_rooms__id__changes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Rooms {Id} Changes"
+      }
+    },
+    "/api/v1/rooms/{id}/messages": {
+      "get": {
+        "operationId": "be00_get__api_v1_rooms__id__messages_api_v1_rooms__id__messages_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Rooms {Id} Messages"
+      },
+      "post": {
+        "operationId": "post_room_message_api_v1_rooms__id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Post Room Message"
+      }
+    },
+    "/api/v1/standings": {
+      "get": {
+        "operationId": "be00_get__api_v1_standings_api_v1_standings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Standings"
+      }
+    },
+    "/api/v1/teams": {
+      "get": {
+        "operationId": "be00_get__api_v1_teams_api_v1_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Teams"
+      }
+    },
+    "/api/v1/users/me/badges": {
+      "get": {
+        "operationId": "be00_get__api_v1_users_me_badges_api_v1_users_me_badges_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Users Me Badges"
+      }
+    },
+    "/api/v1/users/me/favorite-team": {
+      "put": {
+        "operationId": "put_favorite_api_v1_users_me_favorite_team_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Put Favorite"
+      }
+    },
+    "/api/v1/users/me/predictions": {
+      "get": {
+        "operationId": "be00_get__api_v1_users_me_predictions_api_v1_users_me_predictions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Users Me Predictions"
+      }
+    },
+    "/api/v1/users/me/profile": {
+      "get": {
+        "operationId": "be00_get__api_v1_users_me_profile_api_v1_users_me_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Users Me Profile"
+      }
+    },
+    "/api/v1/users/me/whatif/threads": {
+      "get": {
+        "operationId": "be00_get__api_v1_users_me_whatif_threads_api_v1_users_me_whatif_threads_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Users Me Whatif Threads"
+      }
+    },
+    "/api/v1/whatif/threads/{thread_id}": {
+      "get": {
+        "operationId": "be00_get__api_v1_whatif_threads__thread_id__api_v1_whatif_threads__thread_id__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Be00 Get  Api V1 Whatif Threads {Thread Id}"
+      }
+    },
+    "/api/v1/whatif/threads/{thread_id}/messages": {
+      "post": {
+        "operationId": "post_whatif_message_api_v1_whatif_threads__thread_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatifMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "BE-00 route stub"
+          }
+        },
+        "summary": "Post Whatif Message"
+      }
+    }
+  }
+}

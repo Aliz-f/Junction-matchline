@@ -1,0 +1,15 @@
+"""Export the BE-00 route-catalogue snapshot without any database access."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from app.main import app
+
+target = Path(__file__).resolve().parents[1] / "contracts" / "openapi.expected.json"
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(
+    json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+print(target)
