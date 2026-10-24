@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request
@@ -14,6 +15,7 @@ from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.profile import router as profile_router
 from app.core.config import Settings, get_settings
 from app.core.errors import (
     ApiError,
@@ -30,8 +32,6 @@ from app.schemas.contract import (
     CompetitionsResponse,
     CompetitionSummary,
     ErrorEnvelope,
-    FavoriteRequest,
-    FavoriteResponse,
     HealthResponse,
     MatchdaysResponse,
     MetaCapabilities,
@@ -46,7 +46,7 @@ from app.schemas.contract import (
     WhatifThreadRequest,
 )
 
-ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
+ERRORS: dict[int | str, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
 
 def utc_z(value: datetime) -> str:
@@ -84,9 +84,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request.state.request_id
         return response
 
-    app.add_exception_handler(ApiError, api_error_handler)
-    app.add_exception_handler(RequestValidationError, validation_error_handler)
-    app.add_exception_handler(StarletteHTTPException, http_error_handler)
+    app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unexpected_error_handler)
 
     @app.get("/api/v1/health", response_model=HealthResponse, responses=ERRORS)
@@ -98,9 +98,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def meta() -> MetaView:
         demo = settings.mode == "DEMO"
         now = settings.demo_clock_iso if demo else datetime.now(UTC)
-        return MetaView(mode=settings.mode, default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
+        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
 
     app.include_router(auth_router)
+    app.include_router(profile_router)
 
     provider = DemoSportsDataProvider()
 
@@ -154,14 +155,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return await stub(request)
         app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
 
-    for path in ("/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/profile", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+    for path in ("/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
         route(path, ["GET"])
     async def body_stub(request: Request) -> JSONResponse:
         return await stub(request)
-
-    @app.put("/api/v1/users/me/favorite-team", response_model=FavoriteResponse, responses=ERRORS)
-    async def favorite_stub(_: FavoriteRequest, request: Request) -> JSONResponse:
-        return await body_stub(request)
 
     @app.post("/api/v1/matches/{id}/rooms", responses=ERRORS)
     async def room_stub(id: str, _: RoomCreateRequest, request: Request) -> JSONResponse:

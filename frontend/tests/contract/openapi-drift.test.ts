@@ -27,6 +27,8 @@ const backendSchemas = openapi.components.schemas;
 /** Backend component name -> Appendix A schema it must implement. */
 const PAIRS: Record<string, z.AnyZodObject> = {
   AuthUserResponse: C.AuthMeResponse,
+  CompetitionSummary: C.CompetitionSummary,
+  CompetitionsResponse: z.object({ items: z.array(C.CompetitionSummary) }),
   ErrorBody: C.ErrorEnvelope.shape.error,
   ErrorEnvelope: C.ErrorEnvelope,
   FavoriteRequest: C.FavoriteTeamRequest,
@@ -35,11 +37,14 @@ const PAIRS: Record<string, z.AnyZodObject> = {
   LoginRequest: C.LoginRequest,
   MetaCapabilities: C.MetaView.shape.capabilities,
   MetaView: C.MetaView,
+  MatchdaysResponse: z.object({ items: z.array(z.number()) }),
   PredictionRequest: C.PredictionRequest.innerType(),
   RegisterRequest: C.RegisterRequest,
   ReportRequest: C.ReportRequest,
   RoomCreateRequest: C.RoomCreateRequest,
   RoomMessageRequest: C.RoomMessageRequest,
+  TeamSummary: C.TeamSummary,
+  TeamsResponse: z.object({ items: z.array(C.TeamSummary) }),
   UserPublic: C.UserPublic,
   WhatifMessageRequest: C.WhatifMessageRequest,
   WhatifThreadRequest: C.WhatifThreadRequest,

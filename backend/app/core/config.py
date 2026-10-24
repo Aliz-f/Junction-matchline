@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     whatif_premium_daily_messages: int = 30
     demo_features_enabled: bool = True
     demo_clock_iso: datetime = datetime.fromisoformat("2026-10-24T12:00:00+00:00")
+    matchline_demo_free_email: str | None = None
+    matchline_demo_free_password: SecretStr | None = None
+    matchline_demo_premium_email: str | None = None
+    matchline_demo_premium_password: SecretStr | None = None
 
     @property
     def allowed_origins(self) -> list[str]:

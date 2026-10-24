@@ -76,7 +76,7 @@ class Match(Base):
     status: Mapped[str] = mapped_column(String(16))
     home_score: Mapped[int | None]
     away_score: Mapped[int | None]
-    capabilities: Mapped[dict] = mapped_column(JSON, default=dict)
+    capabilities: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     __table_args__ = (UniqueConstraint("provider", "provider_id"), CheckConstraint("home_team_id <> away_team_id"),)
 
 
