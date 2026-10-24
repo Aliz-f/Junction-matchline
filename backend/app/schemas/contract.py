@@ -387,6 +387,13 @@ class RoomSummary(ContractModel):
     can_create: bool
 
 
+class RoomPage(ContractModel):
+    """Typed room-list envelope; unlike generic ``Page``, its items are contractual."""
+
+    items: list[RoomSummary]
+    next_cursor: str | None
+
+
 class RoomMessage(ContractModel):
     id: UUID
     room_id: UUID

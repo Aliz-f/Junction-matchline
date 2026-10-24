@@ -9,7 +9,12 @@ from uuid import UUID
 from sqlalchemy import func, select
 
 from app.core.config import get_settings
-from app.db.football_models import AuditRecord, RoomChangeEvent, RoomMessageRecord
+from app.db.football_models import (
+    AuditRecord,
+    RoomChangeEvent,
+    RoomMessageRecord,
+    RoomRecord,
+)
 from app.db.session import configure_database
 
 
@@ -23,6 +28,11 @@ async def hide_message(message_id: str, reason: str) -> None:
         message = await session.get(RoomMessageRecord, message_id, with_for_update=True)
         if message is None:
             raise RuntimeError("room message not found")
+        await session.scalar(
+            select(RoomRecord)
+            .where(RoomRecord.id == message.room_id)
+            .with_for_update()
+        )
         if message.moderation_state != "HIDDEN":
             message.moderation_state = "HIDDEN"
             seq = (await session.scalar(select(func.max(RoomChangeEvent.seq)).where(RoomChangeEvent.room_id == message.room_id))) or 0
