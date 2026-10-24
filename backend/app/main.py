@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -25,22 +25,28 @@ from app.core.errors import (
 )
 from app.core.logging import SecretRedactionFilter
 from app.db.session import configure_database
+from app.providers.demo import DemoSportsDataProvider
 from app.schemas.contract import (
+    CompetitionSummary,
+    CompetitionsResponse,
     ErrorEnvelope,
     FavoriteRequest,
     FavoriteResponse,
     HealthResponse,
     MetaCapabilities,
     MetaView,
+    MatchdaysResponse,
     PredictionRequest,
     ReportRequest,
     RoomCreateRequest,
     RoomMessageRequest,
+    TeamSummary,
+    TeamsResponse,
     WhatifMessageRequest,
     WhatifThreadRequest,
 )
 
-ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 501: {"model": ErrorEnvelope}}
+ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
 
 def utc_z(value: datetime) -> str:
@@ -72,6 +78,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if origin not in settings.allowed_origins:
                 return error_response(request, 403, "CSRF_ORIGIN_INVALID", "Request Origin is not allowed")
         response = await call_next(request)  # type: ignore[operator]
+        if request.url.path.startswith("/api/v1/"):
+            response.headers["Cache-Control"] = "private, no-store"
+            response.headers["Vary"] = "Cookie"
         response.headers["X-Request-ID"] = request.state.request_id
         return response
 
@@ -93,15 +102,59 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth_router)
 
+    provider = DemoSportsDataProvider()
+
+    async def season_data() -> dict[str, object]:
+        return await provider.normalized_season("PL", 2026)
+
+    @app.get("/api/v1/competitions", response_model=CompetitionsResponse, responses=ERRORS)
+    async def competitions() -> CompetitionsResponse:
+        data = await season_data()
+        competition = data["competition"]
+        assert isinstance(competition, dict)
+        return CompetitionsResponse(
+            items=[
+                CompetitionSummary(
+                    id=competition["id"],
+                    code=competition["code"],
+                    name=competition["name"],
+                    brand_key=competition["brand_key"],
+                    country_code=competition["country_code"],
+                )
+            ]
+        )
+
+    @app.get("/api/v1/teams", response_model=TeamsResponse, responses=ERRORS)
+    async def teams(competition: str = Query(...)) -> TeamsResponse:
+        data = await season_data()
+        competition_data = data["competition"]
+        assert isinstance(competition_data, dict)
+        if competition != competition_data["code"]:
+            raise ApiError(422, "INVALID_INPUT", "Unsupported competition", {"field": "competition"})
+        raw_teams = data["teams"]
+        assert isinstance(raw_teams, list)
+        return TeamsResponse(items=sorted((TeamSummary(crest_url=None, **team) for team in raw_teams), key=lambda team: team.name))
+
+    @app.get("/api/v1/competitions/{code}/matchdays", response_model=MatchdaysResponse, responses=ERRORS)
+    async def matchdays(code: str, season: int = Query(...)) -> MatchdaysResponse:
+        data = await season_data()
+        competition_data = data["competition"]
+        assert isinstance(competition_data, dict)
+        if code != competition_data["code"] or season != competition_data["season_start_year"]:
+            raise ApiError(422, "INVALID_INPUT", "Unsupported competition season")
+        fixtures = data["fixtures"]
+        assert isinstance(fixtures, list)
+        return MatchdaysResponse(items=sorted({fixture["matchday"] for fixture in fixtures}))
+
     async def stub(request: Request) -> JSONResponse:
-        return error_response(request, 501, "NOT_IMPLEMENTED", "This Phase 1 endpoint is not implemented yet")
+        return error_response(request, 502, "PROVIDER_UNAVAILABLE", "This Phase 1 endpoint is not available in the current backend slice")
 
     def route(path: str, methods: list[str], response_model: type | None = None) -> None:
         async def handler(request: Request) -> JSONResponse:
             return await stub(request)
         app.add_api_route(path, handler, methods=methods, response_model=response_model, responses=ERRORS, name=f"contract_{'_'.join(methods).lower()}_{path.replace('/', '_')}")
 
-    for path in ("/api/v1/competitions", "/api/v1/teams", "/api/v1/competitions/{code}/matchdays", "/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/profile", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
+    for path in ("/api/v1/journey", "/api/v1/matches", "/api/v1/matches/{id}", "/api/v1/map/stadiums", "/api/v1/standings", "/api/v1/matches/{id}/impact", "/api/v1/impact/relevant", "/api/v1/matches/{id}/rooms", "/api/v1/rooms", "/api/v1/rooms/{id}", "/api/v1/rooms/{id}/messages", "/api/v1/rooms/{id}/changes", "/api/v1/matches/{id}/predictions/me", "/api/v1/matches/{id}/leaderboard", "/api/v1/matches/{id}/whatif/threads", "/api/v1/users/me/whatif/threads", "/api/v1/whatif/threads/{thread_id}", "/api/v1/users/me/profile", "/api/v1/users/me/badges", "/api/v1/users/me/predictions"):
         route(path, ["GET"])
     async def body_stub(request: Request) -> JSONResponse:
         return await stub(request)

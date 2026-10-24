@@ -42,7 +42,12 @@ async def current_user(request: Request, session: AsyncSession) -> UserRecord | 
     if row is None:
         return None
     stored_session, user = row
-    if stored_session.revoked_at is not None or stored_session.expires_at <= datetime.now(UTC):
+    expires_at = stored_session.expires_at
+    if expires_at.tzinfo is None:
+        # SQLite does not round-trip timezone information even for a
+        # timezone-aware column; application timestamps are always UTC.
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if stored_session.revoked_at is not None or expires_at <= datetime.now(UTC):
         return None
     return user
 
@@ -56,7 +61,7 @@ def set_session_cookie(response: Response, request: Request, token: str) -> None
         secure=settings.session_cookie_secure,
         samesite="lax",
         max_age=settings.session_ttl_days * 86_400,
-        path="/",
+        path="/api/v1",
     )
 
 
@@ -90,7 +95,7 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
 async def login(payload: LoginRequest, request: Request, response: Response, session: AsyncSession = Depends(get_session)) -> AuthUserResponse:
     user = await session.scalar(select(UserRecord).where(UserRecord.email == payload.email.strip().lower()))
     if user is None or not password_matches(user.password_hash, payload.password):
-        raise ApiError(401, "INVALID_CREDENTIALS", "Email or password is incorrect")
+        raise ApiError(401, "UNAUTHENTICATED", "Email or password is incorrect")
     await issue_session(response, request, session, user)
     return AuthUserResponse(user=user_public(user))
 
@@ -98,7 +103,7 @@ async def login(payload: LoginRequest, request: Request, response: Response, ses
 @router.post("/logout", status_code=204, response_class=Response, responses=ERRORS)
 async def logout(request: Request, session: AsyncSession = Depends(get_session)) -> Response:
     if await current_user(request, session) is None:
-        raise ApiError(401, "AUTH_REQUIRED", "Authentication is required")
+        raise ApiError(401, "UNAUTHENTICATED", "Authentication is required")
     token = request.cookies.get(request.app.state.settings.session_cookie_name)
     if token:
         stored = await session.scalar(select(SessionRecord).where(SessionRecord.token_sha256 == hash_session_token(token)))
@@ -106,7 +111,7 @@ async def logout(request: Request, session: AsyncSession = Depends(get_session))
             stored.revoked_at = datetime.now(UTC)
             await session.commit()
     response = Response(status_code=204)
-    response.delete_cookie(request.app.state.settings.session_cookie_name, path="/")
+    response.delete_cookie(request.app.state.settings.session_cookie_name, path="/api/v1")
     return response
 
 
