@@ -1,0 +1,62 @@
+name: Bootstrap
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Foundation hygiene
+    runs-on: ubuntu-latest
+    outputs:
+      specs_present: ${{ steps.specs.outputs.present }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax and validator regression checks
+        run: |
+          python -m compileall -q scripts
+          python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: File hygiene (offline; limited secret patterns)
+        run: |
+          python scripts/check_hygiene.py
+          git diff --check
+      - name: Check spec handoff completeness
+        id: specs
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          from check_specs import EXPECTED
+          present = [name for name in EXPECTED if (Path('specs') / name).exists()]
+          if present and len(present) != len(EXPECTED):
+              missing = sorted(set(EXPECTED) - set(present))
+              sys.exit('FAIL: incomplete spec handoff; missing: ' + ', '.join(missing))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('present=' + ('true' if present else 'false') + '\n')
+          if not present:
+              message = 'SKIPPED (awaiting specs): contract verification BLOCKED; G0 NOT STARTED'
+              print(message)
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  summary.write(message + '\n')
+          PY
+
+  specs:
+    name: Spec alignment
+    needs: foundation
+    if: needs.foundation.outputs.specs_present == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Strict document alignment (not G0 acceptance)
+        run: python scripts/check_specs.py

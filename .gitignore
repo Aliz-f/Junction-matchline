@@ -1,0 +1,50 @@
+# Python and local tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment and credentials; examples must contain placeholders only
+.env
+.env.*
+!.env.example
+!.env.*.example
+!*.example
+.aws/
+.ssh/
+credentials.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Node, builds and test artifacts
+node_modules/
+.next/
+.pnpm-store/
+coverage/
+playwright-report/
+test-results/
+playwright/.auth/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Local IDE and OS artifacts (never rule/spec files)
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.cache/
+*.log
