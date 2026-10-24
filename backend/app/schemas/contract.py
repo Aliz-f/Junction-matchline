@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 Utc = Annotated[str, Field(pattern=r"^.+Z$")]
 
@@ -111,6 +111,11 @@ class FavoriteResponse(ContractModel):
     favorite_team_id: UUID
 
 
+class UserProfile(UserPublic):
+    prediction_summary: dict[str, int]
+    active_badges: list[dict[str, str]]
+
+
 class RegisterRequest(ContractModel):
     email: str
     display_name: str
@@ -135,6 +140,18 @@ class CompetitionSummary(ContractModel):
     name: str
     brand_key: str
     country_code: str
+
+
+class CompetitionsResponse(ContractModel):
+    items: list[CompetitionSummary]
+
+
+class TeamsResponse(ContractModel):
+    items: list[TeamSummary]
+
+
+class MatchdaysResponse(ContractModel):
+    items: list[int]
 
 
 class VenueSummary(ContractModel):
@@ -197,6 +214,107 @@ class MatchDetail(MatchSummary):
     data_capabilities: dict[Literal["events", "lineups", "player_stats"], bool]
 
 
+class JourneyResponse(ContractModel):
+    items: list[MatchSummary]
+    team_id: UUID
+    season_start_year: int
+
+
+class StadiumFixture(ContractModel):
+    match: MatchSummary
+
+
+class StadiumVenue(ContractModel):
+    venue_id: UUID
+    name: str
+    lat: float
+    lng: float
+    coord_verified: Literal[True]
+    home_team_ids: list[UUID]
+    illumination_state: Literal[
+        "UPCOMING_ROUND",
+        "LIVE",
+        "COMPLETED",
+        "INACTIVE",
+        "POSTPONED_OR_CANCELLED",
+        "UNKNOWN",
+    ]
+    fixtures: list[StadiumFixture]
+
+
+class UnmappedMatch(ContractModel):
+    match: MatchSummary
+    reason: Literal["VENUE_MISSING", "VENUE_COORDINATES_UNVERIFIED"]
+
+
+class StadiumMapResponse(ContractModel):
+    competition: str
+    season_start_year: int
+    selected: dict[str, int | str | None]
+    stadiums: list[StadiumVenue]
+    unmapped_matches: list[UnmappedMatch]
+    source: SourceView
+
+
+class StandingsRow(ContractModel):
+    team_id: UUID
+    position: int | None
+    played: int
+    won: int
+    drawn: int
+    lost: int
+    goals_for: int
+    goals_against: int
+    goal_difference: int
+    points: int
+
+
+class StandingsResponse(ContractModel):
+    competition: str
+    season_start_year: int
+    snapshot_id: UUID
+    as_of: Utc
+    source: SourceView
+    rows: list[StandingsRow]
+
+
+class GapEffect(ContractModel):
+    affected_team_id: UUID
+    gap_before: int
+    gap_after: int
+    gap_delta: int
+    # This is always the favourite's movement: rank before minus rank after.
+    position_change: int | None
+    position_note: str | None
+
+
+class ImpactScenario(ContractModel):
+    outcome: Outcome
+    is_hypothetical: bool
+    effects: list[GapEffect]
+
+
+class SourceReference(ContractModel):
+    ref: str
+    label: str
+
+
+class ImpactInsight(ContractModel):
+    match_id: UUID
+    match: MatchSummary
+    favorite_team_id: UUID
+    relevance: Literal["HIGH", "MEDIUM", "LOW", "NONE", "UNKNOWN"]
+    basis: Literal["POINTS_GAP", "NONE", "INSUFFICIENT_DATA"]
+    data_version: str | None
+    verified_at: Utc | None
+    actual_outcome: Outcome | None
+    scenarios: list[ImpactScenario]
+    summary: str
+    summary_type: Literal["TEMPLATE", "AI_EXPLANATION"]
+    caveats: list[str]
+    sources: list[SourceReference]
+
+
 class Page(ContractModel):
     items: list[Any]
     next_cursor: str | None
@@ -209,8 +327,77 @@ class HealthResponse(ContractModel):
 
 class PredictionRequest(ContractModel):
     outcome: Outcome
+    home_score: StrictInt | None
+    away_score: StrictInt | None
+
+    @model_validator(mode="after")
+    def score_pair_matches_outcome(self) -> "PredictionRequest":
+        if (self.home_score is None) != (self.away_score is None):
+            raise ValueError(
+                "home_score and away_score must both be null or both be present"
+            )
+        if self.home_score is None:
+            return self
+        assert self.away_score is not None
+        if self.home_score < 0 or self.away_score < 0:
+            raise ValueError("scores must be nonnegative")
+        actual = Outcome.DRAW
+        if self.home_score > self.away_score:
+            actual = Outcome.HOME
+        elif self.home_score < self.away_score:
+            actual = Outcome.AWAY
+        if actual != self.outcome:
+            raise ValueError("scores must imply the requested outcome")
+        return self
+
+
+class PredictionBreakdown(ContractModel):
+    outcome_points: int
+    exact_score_points: int
+
+
+class PredictionView(ContractModel):
+    id: UUID
+    match_id: UUID
+    outcome: Outcome
     home_score: int | None
     away_score: int | None
+    created_at: Utc
+    submitted_at: Utc
+    locked_at: Utc | None
+    status: PredictionStatus
+    points: int | None
+    breakdown: PredictionBreakdown | None
+
+
+class PredictionMineResponse(ContractModel):
+    prediction: PredictionView | None
+
+
+class PredictionHistoryItem(ContractModel):
+    prediction: PredictionView
+    match: MatchSummary
+
+
+class PredictionHistoryResponse(ContractModel):
+    items: list[PredictionHistoryItem]
+    next_cursor: str | None
+
+
+class LeaderboardEntry(ContractModel):
+    user_id: UUID
+    display_name: str
+    points: int
+    rank: int
+    public_badges: list[BadgeView]
+
+
+class LeaderboardResponse(ContractModel):
+    items: list[LeaderboardEntry]
+
+
+class BadgesResponse(ContractModel):
+    items: list[BadgeView]
 
 
 class RoomCreateRequest(ContractModel):
@@ -220,6 +407,73 @@ class RoomCreateRequest(ContractModel):
 
 class RoomMessageRequest(ContractModel):
     body: str
+
+
+class BadgeView(ContractModel):
+    code: str
+    label: str
+    earned_at: Utc
+    active: bool
+    rule_description: str
+
+
+class AuthorPublic(ContractModel):
+    id: UUID
+    display_name: str
+    public_badges: list[BadgeView]
+
+
+class RoomSummary(ContractModel):
+    id: UUID
+    match_id: UUID
+    match: MatchSummary
+    kind: RoomKind
+    title: str
+    status: RoomStatus
+    created_by: AuthorPublic | None
+    message_count: int
+    can_post: bool
+    can_create: bool
+
+
+class RoomMessage(ContractModel):
+    id: UUID
+    room_id: UUID
+    body: str
+    created_at: Utc
+    author: AuthorPublic
+    moderation_state: Literal["VISIBLE", "FLAGGED"]
+
+
+class RoomMessagesPage(ContractModel):
+    items: list[RoomMessage]
+    next_cursor: str | None
+    sync_after_seq: int
+
+
+class RoomChangeUpsert(ContractModel):
+    seq: int
+    kind: Literal["UPSERT"]
+    message_id: UUID
+    message: RoomMessage
+
+
+class RoomChangeRemove(ContractModel):
+    seq: int
+    kind: Literal["REMOVE"]
+    message_id: UUID
+    message: None = None
+
+
+class RoomChangePage(ContractModel):
+    items: list[RoomChangeUpsert | RoomChangeRemove]
+    next_after_seq: int
+    has_more: bool
+
+
+class ReportResponse(ContractModel):
+    id: UUID
+    status: Literal["OPEN"]
 
 
 class ReportRequest(ContractModel):

@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens (FE-01).
+ *
+ * Competition accents and status tones are deliberately separate scales:
+ * a competition accent never appears on a status indicator and vice versa, so
+ * colour alone can never be the only carrier of match status.
+ */
+:root {
+  --surface: 248 250 252;
+  --surface-raised: 255 255 255;
+  --surface-sunken: 241 245 249;
+  --line: 203 213 225;
+  --ink: 15 23 42;
+  --ink-muted: 71 85 105;
+  --pitch: 22 101 52;
+
+  /* Competition accents: identity only. */
+  --competition-pl: 29 78 216;       /* Premier League blue */
+  --competition-ucl: 109 40 217;     /* Champions League purple */
+  --competition-facup: 194 65 12;    /* FA Cup orange */
+  --competition-neutral: 71 85 105;  /* Unknown competition */
+
+  /* Status tones: state only. */
+  --status-scheduled: 71 85 105;
+  --status-live: 190 18 60;
+  --status-halftime: 161 98 7;
+  --status-finished: 21 128 61;
+  --status-disrupted: 180 83 9;
+  --status-unknown: 100 116 139;
+
+  --focus: 37 99 235;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: 2 6 23;
+    --surface-raised: 15 23 42;
+    --surface-sunken: 10 15 32;
+    --line: 51 65 85;
+    --ink: 248 250 252;
+    --ink-muted: 148 163 184;
+    --pitch: 74 222 128;
+
+    --competition-pl: 96 165 250;
+    --competition-ucl: 167 139 250;
+    --competition-facup: 251 146 60;
+    --competition-neutral: 148 163 184;
+
+    --status-scheduled: 148 163 184;
+    --status-live: 251 113 133;
+    --status-halftime: 250 204 21;
+    --status-finished: 74 222 128;
+    --status-disrupted: 251 191 36;
+    --status-unknown: 148 163 184;
+
+    --focus: 147 197 253;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: 2 6 23;
+  --surface-raised: 15 23 42;
+  --surface-sunken: 10 15 32;
+  --line: 51 65 85;
+  --ink: 248 250 252;
+  --ink-muted: 148 163 184;
+  --pitch: 74 222 128;
+
+  --competition-pl: 96 165 250;
+  --competition-ucl: 167 139 250;
+  --competition-facup: 251 146 60;
+  --competition-neutral: 148 163 184;
+
+  --status-scheduled: 148 163 184;
+  --status-live: 251 113 133;
+  --status-halftime: 250 204 21;
+  --status-finished: 74 222 128;
+  --status-disrupted: 251 191 36;
+  --status-unknown: 148 163 184;
+
+  --focus: 147 197 253;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* A visible focus ring on every interactive element (FE-01 keyboard focus). */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid rgb(var(--focus));
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+}
+
+@layer components {
+  /* Status pulse, used only by StatusIndicator and only when animated. */
+  .status-pulse::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: 0.45;
+    animation: status-pulse 1.8s ease-out infinite;
+  }
+
+  .journey-room-callout {
+    position: absolute;
+    z-index: 1;
+    width: max-content;
+    max-width: 7.5rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 9999px;
+    background: rgb(var(--surface-raised));
+    padding: 0.3rem 0.55rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    line-height: 1;
+    color: rgb(var(--ink));
+    box-shadow: 0 5px 14px rgb(15 23 42 / 0.12);
+  }
+
+  .journey-room-callout:hover { background: rgb(var(--surface-sunken)); }
+  .journey-room-before { right: calc(100% + 0.45rem); top: 1.4rem; }
+  .journey-room-after { left: calc(100% + 0.45rem); top: 3rem; }
+
+}
+
+@keyframes status-pulse {
+  0% { transform: scale(1); opacity: 0.45; }
+  70% { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/*
+ * Reduced motion: drop the animation entirely. The textual status label is
+ * always present, so no information is lost (FE-01 acceptance).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .status-pulse::before {
+    display: none;
+  }
+}

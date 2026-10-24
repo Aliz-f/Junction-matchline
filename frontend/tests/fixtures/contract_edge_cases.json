@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0-be00",
+  "namespace": "edge-only-not-public-demo",
+  "manifest_ref": "../../app/seed/demo_manifest.json",
+  "competition_id": "10000000-0000-4000-8000-000000000001",
+  "season_start_year": 2026,
+  "venues": [
+    {"id":"60000000-0000-4000-8000-000000000001","name":"Verified Neutral Test Ground","lat":51.5000,"lng":-0.1200,"coord_verified":true,"coord_source":"https://www.openstreetmap.org/","home_team_ids":[]},
+    {"id":"60000000-0000-4000-8000-000000000002","name":"Verified Shared Test Ground","lat":51.5100,"lng":-0.1300,"coord_verified":true,"coord_source":"https://www.openstreetmap.org/","home_team_ids":[]}
+  ],
+  "cases": {
+    "FAVORITE_AWAY":{"id":"50000000-0000-4000-8000-000000000001","fixture":{"matchday":18,"kickoff_at":"2026-12-19T15:00:00Z","home_team_id":"20000000-0000-4000-8000-000000000002","away_team_id":"20000000-0000-4000-8000-000000000001","venue_id":"40000000-0000-4000-8000-000000000002","status":"SCHEDULED"},"expected":{"favorite_fixture_visible":true,"favorite_home_outline":false}},
+    "NEUTRAL_VENUE":{"id":"50000000-0000-4000-8000-000000000002","fixture":{"matchday":19,"kickoff_at":"2027-01-02T15:00:00Z","home_team_id":"20000000-0000-4000-8000-000000000001","away_team_id":"20000000-0000-4000-8000-000000000003","venue_id":"60000000-0000-4000-8000-000000000001","status":"SCHEDULED"},"expected":{"map_bucket":"stadiums","home_team_ids":[]}},
+    "MIXED_FINISHED":{"id":"50000000-0000-4000-8000-000000000003","fixture":{"matchday":20,"kickoff_at":"2027-01-09T12:00:00Z","home_team_id":"20000000-0000-4000-8000-000000000002","away_team_id":"20000000-0000-4000-8000-000000000003","venue_id":"60000000-0000-4000-8000-000000000002","status":"FINISHED","score":{"home":2,"away":1}},"expected":{"clickable":true}},
+    "MIXED_LIVE":{"id":"50000000-0000-4000-8000-000000000004","fixture":{"matchday":20,"kickoff_at":"2027-01-09T15:00:00Z","home_team_id":"20000000-0000-4000-8000-000000000001","away_team_id":"20000000-0000-4000-8000-000000000004","venue_id":"60000000-0000-4000-8000-000000000002","status":"LIVE","score":{"home":0,"away":0}},"expected":{"aggregate_state":"LIVE","finished_fixture_clickable":true}},
+    "LONDON_DST_AUTUMN_BEFORE_FALLBACK":{"id":"50000000-0000-4000-8000-000000000005","fixture":{"matchday":21,"kickoff_at":"2026-10-24T23:30:00Z","home_team_id":"20000000-0000-4000-8000-000000000005","away_team_id":"20000000-0000-4000-8000-000000000006","status":"SCHEDULED"},"expected":{"london_date":"2026-10-25"}},
+    "LONDON_DST_AUTUMN_AFTER_FALLBACK":{"id":"50000000-0000-4000-8000-000000000006","fixture":{"matchday":22,"kickoff_at":"2026-10-25T23:30:00Z","home_team_id":"20000000-0000-4000-8000-000000000006","away_team_id":"20000000-0000-4000-8000-000000000005","status":"SCHEDULED"},"expected":{"london_date":"2026-10-25"}},
+    "EMPTY_ROOM_BURST":{"room_id":"70000000-0000-4000-8000-000000000001","message_namespace":"d0000000-0000-4000-8000-000000000001","initial_sync_after_seq":0,"generate":{"count":45,"uuid_version":5,"ordered_timestamp_start":"2027-01-01T00:00:00Z","limit":20,"pages":3}},
+    "HIDDEN_OLD_MESSAGE":{"room_id":"70000000-0000-4000-8000-000000000002","message_namespace":"d0000000-0000-4000-8000-000000000002","generate":{"count":120,"uuid_version":5,"hide":"oldest","remove_event":true,"replay_never_includes_body":true}},
+    "CLOCK_CUTOFF":{"fixture_id":"30000000-0000-4000-8000-000000000001","room_id":"70000000-0000-4000-8000-000000000010","expected":{"fixture_status":"SCHEDULED","room_status":"READ_ONLY","post_status":409}},
+    "PREDICTION_SCORE_CONSTRAINT":{"accepted":[["HOME",2,1],["DRAW",1,1],["AWAY",0,2],["HOME",null,null]],"rejected":[["HOME",0,2],["DRAW",2,1],["HOME",2,null],["AWAY",-1,0],["HOME",1.5,0]],"expected_status":422},
+    "MAP_NO_FAVORITE":{"authenticated_favorite_team_id":null,"guest_favorite_team_id":null,"explicit_guest_team_id":"20000000-0000-4000-8000-000000000001","expected":{"authenticated_impact_call":false,"guest_without_selection_impact_call":false,"guest_selected_impact_call":true}}
+  },
+  "g0_status_capability_matrix":{"SCHEDULED":"match_upcoming","LIVE":"match_live","HALFTIME":"match_halftime","FINISHED_RICH":"match_finished","FINISHED_POOR":"match_event_poor_finished","POSTPONED":"match_postponed","CANCELLED":"match_cancelled","NON_RELEVANT":"match_non_relevant","SUSPENDED":"edge-only","UNKNOWN":"edge-only"}
+}
