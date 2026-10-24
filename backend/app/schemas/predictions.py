@@ -24,6 +24,7 @@ class ValidatedPredictionRequest(PredictionRequest):
             raise ValueError("home_score and away_score must both be null or both be present")
         if self.home_score is None:
             return self
+        assert self.away_score is not None
         actual = Outcome.DRAW
         if self.home_score > self.away_score:
             actual = Outcome.HOME

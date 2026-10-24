@@ -7,13 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import current_user, user_public
 from app.core.errors import ApiError
 from app.db.session import get_session
+from app.db.models import UserRecord
 from app.providers.demo import DemoSportsDataProvider
 from app.schemas.contract import FavoriteRequest, FavoriteResponse, UserProfile
 
 router = APIRouter(prefix="/api/v1/users/me", tags=["profile"])
 
 
-async def require_user(request: Request, session: AsyncSession):
+async def require_user(request: Request, session: AsyncSession) -> UserRecord:
     user = await current_user(request, session)
     if user is None:
         raise ApiError(401, "UNAUTHENTICATED", "Authentication is required")

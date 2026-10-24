@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request
@@ -45,7 +46,7 @@ from app.schemas.contract import (
     WhatifThreadRequest,
 )
 
-ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
+ERRORS: dict[int, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 502: {"model": ErrorEnvelope}}
 
 
 def utc_z(value: datetime) -> str:
@@ -83,9 +84,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request.state.request_id
         return response
 
-    app.add_exception_handler(ApiError, api_error_handler)
-    app.add_exception_handler(RequestValidationError, validation_error_handler)
-    app.add_exception_handler(StarletteHTTPException, http_error_handler)
+    app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unexpected_error_handler)
 
     @app.get("/api/v1/health", response_model=HealthResponse, responses=ERRORS)
@@ -97,7 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def meta() -> MetaView:
         demo = settings.mode == "DEMO"
         now = settings.demo_clock_iso if demo else datetime.now(UTC)
-        return MetaView(mode=settings.mode, default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
+        return MetaView(mode=cast(Literal["DEMO", "LIVE"], settings.mode), default_competition="PL", default_season_start_year=2026, server_now_utc=utc_z(now), demo_clock_frozen=demo, demo_epoch=1 if demo else None, scenario_revision=1 if demo else None, capabilities=MetaCapabilities(whatif_sharing=False, events=False, live_updates=False))
 
     app.include_router(auth_router)
     app.include_router(profile_router)

@@ -235,6 +235,7 @@ class PredictionRequest(ContractModel):
             raise ValueError("home_score and away_score must both be null or both be present")
         if self.home_score is None:
             return self
+        assert self.away_score is not None
         if self.home_score < 0 or self.away_score < 0:
             raise ValueError("scores must be nonnegative")
         actual = Outcome.DRAW

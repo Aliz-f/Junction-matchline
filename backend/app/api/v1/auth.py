@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -16,7 +17,7 @@ from app.db.session import get_session
 from app.schemas.contract import AuthUserResponse, ErrorEnvelope, LoginRequest, Plan, RegisterRequest, Role, UserPublic
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}}
+ERRORS: dict[int, dict[str, Any]] = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}}
 
 
 def user_public(user: UserRecord) -> UserPublic:
@@ -49,7 +50,7 @@ async def current_user(request: Request, session: AsyncSession) -> UserRecord | 
         expires_at = expires_at.replace(tzinfo=UTC)
     if stored_session.revoked_at is not None or expires_at <= datetime.now(UTC):
         return None
-    return user
+    return cast(UserRecord, user)
 
 
 def set_session_cookie(response: Response, request: Request, token: str) -> None:
