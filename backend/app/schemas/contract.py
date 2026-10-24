@@ -111,6 +111,11 @@ class FavoriteResponse(ContractModel):
     favorite_team_id: UUID
 
 
+class UserProfile(UserPublic):
+    prediction_summary: dict[str, int]
+    active_badges: list[dict[str, str]]
+
+
 class RegisterRequest(ContractModel):
     email: str
     display_name: str
