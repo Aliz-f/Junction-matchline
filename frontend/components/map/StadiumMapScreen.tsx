@@ -15,22 +15,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMatchdays, useMeta, useSession, useStadiumMap } from "@/lib/api/hooks";
+import { useCompetitions, useMatchdays, useMeta, useSession, useStadiumMap } from "@/lib/api/hooks";
 import { readGuestFavorite } from "@/lib/favorite-team";
 import { ApiError } from "@/lib/api/client";
 import { EmptyState, ErrorState, SkeletonList } from "@/components/ui/States";
 import { SourceBadge, StaleSourceBanner } from "@/components/ui/SourceBadge";
 import { ILLUMINATION_TOKENS } from "@/lib/design/illumination";
+import { EnglandMap } from "./EnglandMap";
 import { VenueList } from "./VenueList";
 import { formatDate } from "@/lib/time";
-
-// Leaflet touches `window` at module scope, so it must not be server-rendered.
-const LeafletMap = dynamic(() => import("./LeafletMap").then((m) => m.LeafletMap), {
-  ssr: false,
-  loading: () => <div className="h-[22rem] w-full animate-pulse rounded-lg bg-surface-sunken" />,
-});
 
 type Selector = { date: string | null; matchday: number | null };
 
@@ -97,6 +91,11 @@ export function StadiumMapScreen() {
   }, [serverNow, selector]);
 
   const map = useStadiumMap(selector ?? { date: null, matchday: null });
+  const competitions = useCompetitions();
+
+  // The banner uses the server's own competition name, not hardcoded branding.
+  const competitionLabel =
+    competitions.data?.items.find((item) => item.code === map.data?.competition)?.name ?? null;
 
   // CT-15: a signed-in viewer's favourite is the server's, null included.
   const favoriteTeamId = user ? user.favorite_team_id : guestFavorite;
@@ -218,10 +217,13 @@ export function StadiumMapScreen() {
             />
           ) : null}
 
-          <LeafletMap
+          <EnglandMap
             stadiums={map.data.stadiums}
             favoriteTeamId={favoriteTeamId}
             onSelect={setHighlight}
+            selectedVenueId={highlight}
+            competitionName={competitionLabel}
+            seasonStartYear={map.data.season_start_year}
           />
 
           <VenueList

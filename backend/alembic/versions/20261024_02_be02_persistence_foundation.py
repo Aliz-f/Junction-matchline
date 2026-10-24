@@ -63,7 +63,7 @@ def upgrade() -> None:
         sa.Column("away_score", sa.Integer()),
         sa.Column("capabilities", sa.JSON(), nullable=False),
         sa.UniqueConstraint("provider", "provider_id"),
-        sa.CheckConstraint("home_team_id <> away_team_id"),
+        sa.CheckConstraint("home_team_id <> away_team_id", name="ck_matches_distinct_teams"),
     )
     op.create_index("ix_matches_competition_id", "matches", ["competition_id"])
     op.create_index("ix_matches_season_id", "matches", ["season_id"])
