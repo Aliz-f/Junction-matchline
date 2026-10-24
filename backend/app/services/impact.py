@@ -81,16 +81,22 @@ def _effect(
     home_id, away_id = fixture["home_team_id"], fixture["away_team_id"]
     favorite_before = by_team[favorite_id]
     affected_before = by_team[affected_id]
+    gap_before = favorite_before.points - affected_before.points
     additions = {
         home_id: points_for(outcome, home=True),
         away_id: points_for(outcome, home=False),
     }
-    gap_before = favorite_before.points - affected_before.points
-    gap_after = (
-        favorite_before.points
-        + additions.get(favorite_id, 0)
-        - (affected_before.points + additions.get(affected_id, 0))
-    )
+    if confirmed and post_rows is not None:
+        post_by_team = {str(row.team_id): row for row in post_rows}
+        favorite_after = post_by_team[favorite_id]
+        affected_after = post_by_team[affected_id]
+        gap_after = favorite_after.points - affected_after.points
+    else:
+        gap_after = (
+            favorite_before.points
+            + additions.get(favorite_id, 0)
+            - (affected_before.points + additions.get(affected_id, 0))
+        )
     position_change: int | None = None
     position_note: str | None = (
         "Position is unavailable without verified tiebreaker outcomes."
@@ -125,9 +131,10 @@ def impact_insight(
     effective_at: datetime | None = None,
     source_version: str | None = None,
     post_raw_rows: list[dict[str, object]] | None = None,
+    server_now_utc: datetime | None = None,
 ) -> ImpactInsight:
     """Return all calculable scenarios without fabricating missing rankings."""
-    match = summary(fixture, data)
+    match = summary(fixture, data, server_now_utc=server_now_utc)
     actual = (
         outcome_for_score(
             fixture.get("score", {}).get("home"), fixture.get("score", {}).get("away")
@@ -172,6 +179,19 @@ def impact_insight(
         )
     relevance, basis = relevance_for(fixture, favorite_team_id, rows)
     post_rows = validated_rows(post_raw_rows) if post_raw_rows else None
+    required_teams = {favorite_team_id, fixture["home_team_id"], fixture["away_team_id"]}
+    if actual is not None and (
+        post_rows is None or not required_teams.issubset({str(row.team_id) for row in post_rows})
+    ):
+        return ImpactInsight(
+            **base,
+            relevance="UNKNOWN",
+            basis="INSUFFICIENT_DATA",
+            scenarios=[],
+            summary="Impact is unresolved because no verified post-match standings snapshot is available.",
+            caveats=["A verified final score is available, but verified pre/post standings are required for impact."],
+            sources=[],
+        )
     opponents = [
         team
         for team in (fixture["home_team_id"], fixture["away_team_id"])

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import base64
 import binascii
-from datetime import UTC, date
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,12 +25,17 @@ from app.services.demo_football import (
     source,
 )
 from app.services.impact import impact_insight, validated_rows
+from app.services.runtime import runtime_state
 
 router = APIRouter(prefix="/api/v1", tags=["impact"])
 
 
 async def read_data(session: AsyncSession) -> dict[str, Any]:
     return await persisted_manifest(session) or manifest()
+
+
+def utc_instant(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 async def snapshots(
@@ -68,15 +73,21 @@ async def snapshots(
 
 def cursor_value(
     favorite: str,
+    competition: str,
+    season: int,
     matchday: int | None,
     selected_date: date | None,
+    snapshot_key: str,
     fixture: dict[str, Any],
 ) -> str:
     raw = "|".join(
         (
             favorite,
+            competition,
+            str(season),
             str(matchday or ""),
             str(selected_date or ""),
+            snapshot_key,
             fixture["kickoff_at"],
             fixture["id"],
         )
@@ -85,20 +96,29 @@ def cursor_value(
 
 
 def parse_cursor(
-    cursor: str, favorite: str, matchday: int | None, selected_date: date | None
+    cursor: str,
+    favorite: str,
+    competition: str,
+    season: int,
+    matchday: int | None,
+    selected_date: date | None,
+    snapshot_key: str,
 ) -> tuple[str, str]:
     try:
         raw = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)).decode()
-        cursor_favorite, cursor_matchday, cursor_date, kickoff, match_id = raw.split(
-            "|", 4
+        cursor_favorite, cursor_competition, cursor_season, cursor_matchday, cursor_date, cursor_snapshot, kickoff, match_id = raw.split(
+            "|", 7
         )
         UUID(match_id)
     except (ValueError, UnicodeDecodeError, binascii.Error):
         raise ApiError(422, "INVALID_INPUT", "Invalid impact cursor") from None
-    if (cursor_favorite, cursor_matchday, cursor_date) != (
+    if (cursor_favorite, cursor_competition, cursor_season, cursor_matchday, cursor_date, cursor_snapshot) != (
         favorite,
+        competition,
+        str(season),
         str(matchday or ""),
         str(selected_date or ""),
+        snapshot_key,
     ):
         raise ApiError(
             422, "INVALID_INPUT", "Impact cursor does not match selected filters"
@@ -109,9 +129,13 @@ def parse_cursor(
 def snapshots_for_fixture(
     items: list[StandingsSnapshot], fixture: dict[str, Any]
 ) -> tuple[StandingsSnapshot | None, StandingsSnapshot | None]:
-    kickoff = fixture["kickoff_at"].replace("Z", "+00:00")
-    pre = [item for item in items if item.effective_at.isoformat() <= kickoff]
-    post = [item for item in items if item.effective_at.isoformat() > kickoff]
+    kickoff = datetime.fromisoformat(fixture["kickoff_at"].replace("Z", "+00:00")).astimezone(UTC)
+
+    def observed_at(item: StandingsSnapshot) -> datetime:
+        return utc_instant(item.effective_at)
+
+    pre = [item for item in items if observed_at(item) <= kickoff]
+    post = [item for item in items if observed_at(item) > kickoff]
     return (pre[-1] if pre else None, post[0] if post else None)
 
 
@@ -120,6 +144,7 @@ def build(
     data: dict[str, Any],
     favorite: str,
     items: list[StandingsSnapshot],
+    server_now_utc: datetime,
 ) -> ImpactInsight:
     pre, post = snapshots_for_fixture(items, fixture)
     return impact_insight(
@@ -131,6 +156,7 @@ def build(
         effective_at=pre.effective_at if pre else None,
         source_version=pre.source_version if pre else None,
         post_raw_rows=post.table_json if post and post.table_json else None,
+        server_now_utc=server_now_utc,
     )
 
 
@@ -156,7 +182,7 @@ async def standings(
         competition=competition,
         season_start_year=season,
         snapshot_id=UUID(latest.id),
-        as_of=latest.effective_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+        as_of=utc_instant(latest.effective_at).isoformat().replace("+00:00", "Z"),
         source=source(),
         rows=validated_rows(latest.table_json),
     )
@@ -164,6 +190,7 @@ async def standings(
 
 @router.get("/matches/{match_id}/impact", response_model=ImpactInsight)
 async def match_impact(
+    request: Request,
     match_id: str,
     favorite_team_id: str = Query(...),
     session: AsyncSession = Depends(get_session),
@@ -174,11 +201,13 @@ async def match_impact(
     fixture = fixture_by_id(data, match_id)
     if fixture is None:
         raise ApiError(404, "NOT_FOUND", "Match was not found")
-    return build(fixture, data, favorite_team_id, await snapshots(session, data))
+    now, _, _ = await runtime_state(session, request.app.state.settings.demo_clock_iso)
+    return build(fixture, data, favorite_team_id, await snapshots(session, data), now)
 
 
 @router.get("/impact/relevant", response_model=Page)
 async def relevant_impact(
+    request: Request,
     favorite_team_id: str = Query(...),
     competition: str = Query(...),
     season: int = Query(...),
@@ -206,13 +235,20 @@ async def relevant_impact(
         )
     )
     ordered = sorted(fixtures, key=lambda item: (item["kickoff_at"], item["id"]))
+    snapshots_list = await snapshots(session, data)
+    snapshot_key = ",".join(
+        f"{item.id}:{item.source_version}:{utc_instant(item.effective_at).isoformat()}"
+        for item in snapshots_list
+    )
     if cursor:
-        cursor_key = parse_cursor(cursor, favorite_team_id, matchday, date_value)
+        cursor_key = parse_cursor(
+            cursor, favorite_team_id, competition, season, matchday, date_value, snapshot_key
+        )
         ordered = [
             item for item in ordered if (item["kickoff_at"], item["id"]) > cursor_key
         ]
-    snapshots_list = await snapshots(session, data)
-    insights = [build(item, data, favorite_team_id, snapshots_list) for item in ordered]
+    now, _, _ = await runtime_state(session, request.app.state.settings.demo_clock_iso)
+    insights = [build(item, data, favorite_team_id, snapshots_list, now) for item in ordered]
     # The feed is an other-team recommendation subset; UNKNOWN remains visible.
     filtered = [
         item
@@ -227,5 +263,7 @@ async def relevant_impact(
     if len(filtered) > len(page):
         fixture = fixture_by_id(data, str(page[-1].match_id))
         assert fixture is not None
-        next_cursor = cursor_value(favorite_team_id, matchday, date_value, fixture)
+        next_cursor = cursor_value(
+            favorite_team_id, competition, season, matchday, date_value, snapshot_key, fixture
+        )
     return Page(items=page, next_cursor=next_cursor)

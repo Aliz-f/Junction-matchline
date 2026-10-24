@@ -1,14 +1,14 @@
 """add prediction lock and settlement timestamps for BE-07
 
-Revision ID: 20261024_11
-Revises: 20261024_10
+Revision ID: 20261024_12
+Revises: 20261024_11
 """
 import sqlalchemy as sa
 
 from alembic import op
 
-revision = "20261024_11"
-down_revision = "20261024_10"
+revision = "20261024_12"
+down_revision = "20261024_11"
 branch_labels = None
 depends_on = None
 

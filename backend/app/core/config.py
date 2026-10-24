@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     matchline_demo_free_password: SecretStr | None = None
     matchline_demo_premium_email: str | None = None
     matchline_demo_premium_password: SecretStr | None = None
+    matchline_moderation_cli_enabled: bool = False
+    matchline_moderation_operator: str | None = None
 
     @property
     def allowed_origins(self) -> list[str]:

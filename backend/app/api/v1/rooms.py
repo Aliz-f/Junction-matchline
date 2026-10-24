@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import html
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
@@ -21,12 +21,13 @@ from app.db.football_models import (
     RoomChangeEvent,
     RoomMessageRecord,
     RoomRecord,
+    UserBadgeRecord,
 )
 from app.db.models import UserRecord
 from app.db.session import get_session
 from app.schemas.contract import (
     AuthorPublic,
-    Page,
+    BadgeView,
     ReportRequest,
     ReportResponse,
     RoomChangePage,
@@ -37,6 +38,7 @@ from app.schemas.contract import (
     RoomMessage,
     RoomMessageRequest,
     RoomMessagesPage,
+    RoomPage,
     RoomStatus,
     RoomSummary,
 )
@@ -58,20 +60,27 @@ async def data(session: AsyncSession) -> dict[str, Any] | None:
 async def effective_status(room: RoomRecord, match: Match, now: datetime) -> str:
     if room.status == "HIDDEN":
         return "HIDDEN"
+    if room.kind == "POST_MATCH" and match.status != "FINISHED":
+        return "HIDDEN"
+    if room.status == "READ_ONLY":
+        return "READ_ONLY"
     kickoff = (
         match.kickoff_at.replace(tzinfo=UTC)
         if match.kickoff_at.tzinfo is None
         else match.kickoff_at
     )
     if room.kind == "POST_MATCH":
-        return "OPEN" if match.status == "FINISHED" else "HIDDEN"
+        return "OPEN"
     return "OPEN" if match.status == "SCHEDULED" and now < kickoff else "READ_ONLY"
 
 
 async def room_and_match(
-    session: AsyncSession, room_id: str, now: datetime
+    session: AsyncSession, room_id: str, now: datetime, *, lock: bool = False
 ) -> tuple[RoomRecord, Match, str]:
-    room = await session.get(RoomRecord, room_id)
+    room_query = select(RoomRecord).where(RoomRecord.id == room_id)
+    if lock:
+        room_query = room_query.with_for_update()
+    room = await session.scalar(room_query)
     if room is None:
         raise ApiError(404, "NOT_FOUND", "Room was not found")
     match = await session.get(Match, room.match_id)
@@ -84,9 +93,83 @@ async def author(session: AsyncSession, user_id: str) -> AuthorPublic:
     user = await session.get(UserRecord, user_id)
     if user is None:
         raise RuntimeError("room message author missing")
-    return AuthorPublic(
-        id=UUID(user.id), display_name=user.display_name, public_badges=[]
+    badges = list(
+        (
+            await session.scalars(
+                select(UserBadgeRecord)
+                .where(UserBadgeRecord.user_id == user.id, UserBadgeRecord.active.is_(True))
+                .order_by(UserBadgeRecord.earned_at, UserBadgeRecord.badge_code)
+            )
+        ).all()
     )
+    return AuthorPublic(
+        id=UUID(user.id),
+        display_name=user.display_name,
+        public_badges=[
+            BadgeView(
+                code=badge.badge_code,
+                label=str(badge.evidence_json.get("label", badge.badge_code)),
+                earned_at=iso(badge.earned_at),
+                active=badge.active,
+                rule_description=str(
+                    badge.evidence_json.get("rule_description", "Server-verified badge")
+                ),
+            )
+            for badge in badges
+        ],
+    )
+
+
+async def enforce_rate_limit(
+    session: AsyncSession,
+    *,
+    model: type[RoomMessageRecord] | type[RoomRecord] | type[ReportRecord],
+    user_id: str,
+    now: datetime,
+    limit: int,
+    window: timedelta,
+) -> None:
+    user_column = (
+        RoomMessageRecord.user_id
+        if model is RoomMessageRecord
+        else RoomRecord.created_by_user_id
+        if model is RoomRecord
+        else ReportRecord.reporter_user_id
+    )
+    created_column = model.created_at
+    count = (
+        await session.scalar(
+            select(func.count())
+            .select_from(model)
+            .where(user_column == user_id, created_column >= now - window)
+        )
+        or 0
+    )
+    if count >= limit:
+        raise ApiError(
+            429,
+            "RATE_LIMITED",
+            "Too many room actions; please try again later",
+            {"reset_at": iso(now + window)},
+        )
+
+
+def decode_cursor(cursor: str) -> tuple[str, str]:
+    try:
+        values = (
+            base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
+            .decode()
+            .split("|", 1)
+        )
+        if len(values) != 2 or not all(values):
+            raise ValueError
+        return values[0], values[1]
+    except (ValueError, UnicodeDecodeError, binascii.Error):
+        raise ApiError(422, "INVALID_INPUT", "Invalid room cursor") from None
+
+
+def encode_cursor(created_at: datetime, item_id: str) -> str:
+    return base64.urlsafe_b64encode(f"{iso(created_at)}|{item_id}".encode()).decode().rstrip("=")
 
 
 async def can_create(
@@ -175,45 +258,70 @@ async def room_detail(
     return await room_summary(session, room, match, value, user, now)
 
 
-@router.get("/rooms", response_model=Page)
-async def rooms(
+async def list_rooms(
     request: Request,
-    competition: str = Query(...),
-    kind: str | None = Query(None),
-    limit: int = Query(20, ge=1, le=100),
-    session: AsyncSession = Depends(get_session),
-) -> Page:
+    competition: str,
+    kind: RoomKind | None,
+    limit: int,
+    cursor: str | None,
+    session: AsyncSession,
+    match_id: str | None = None,
+) -> RoomPage:
     value = await data(session)
     if value is None or competition != value["competition"]["code"]:
         raise ApiError(422, "INVALID_INPUT", "Unsupported competition")
     now = await current_now(request, session)
     user = await current_user(request, session)
+    room_query = select(RoomRecord)
+    if match_id:
+        room_query = room_query.where(RoomRecord.match_id == match_id)
     rows = list(
-        (await session.scalars(select(RoomRecord).order_by(RoomRecord.id))).all()
+        (
+            await session.scalars(
+                room_query.order_by(RoomRecord.created_at.desc(), RoomRecord.id.desc())
+            )
+        ).all()
     )
-    items = []
+    anchor = decode_cursor(cursor) if cursor else None
+    items: list[RoomSummary] = []
     for room in rows:
-        if kind and room.kind != kind:
+        if kind and room.kind != kind.value:
+            continue
+        if anchor and (iso(room.created_at), room.id) >= anchor:
             continue
         match = await session.get(Match, room.match_id)
         if match and await effective_status(room, match, now) != "HIDDEN":
             items.append(await room_summary(session, room, match, value, user, now))
-    return Page(items=items[:limit], next_cursor=None)
+    selected = items[:limit]
+    last = next((room for room in rows if str(room.id) == str(selected[-1].id)), None) if selected else None
+    return RoomPage(
+        items=selected,
+        next_cursor=encode_cursor(last.created_at, last.id) if last and len(items) > len(selected) else None,
+    )
 
 
-@router.get("/matches/{match_id}/rooms", response_model=Page)
+@router.get("/rooms", response_model=RoomPage)
+async def rooms(
+    request: Request,
+    competition: str = Query(...),
+    kind: RoomKind | None = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+    session: AsyncSession = Depends(get_session),
+) -> RoomPage:
+    return await list_rooms(request, competition, kind, limit, cursor, session)
+
+
+@router.get("/matches/{match_id}/rooms", response_model=RoomPage)
 async def match_rooms(
     match_id: str,
     request: Request,
-    kind: str | None = Query(None),
+    kind: RoomKind | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
     session: AsyncSession = Depends(get_session),
-) -> Page:
-    response = await rooms(request, "PL", kind, limit, session)
-    return Page(
-        items=[item for item in response.items if str(item.match_id) == match_id],
-        next_cursor=None,
-    )
+) -> RoomPage:
+    return await list_rooms(request, "PL", kind, limit, cursor, session, match_id)
 
 
 @router.post("/matches/{match_id}/rooms", response_model=RoomSummary, status_code=201)
@@ -234,6 +342,9 @@ async def create_room(
         raise ApiError(404, "NOT_FOUND", "Match was not found")
     if not await can_create(match, payload.kind.value, user, now):
         raise ApiError(409, "ROOM_CLOSED", "A room of this kind cannot be created now")
+    await enforce_rate_limit(
+        session, model=RoomRecord, user_id=user.id, now=now, limit=3, window=timedelta(hours=1)
+    )
     room = RoomRecord(
         id=str(uuid4()),
         match_id=match_id,
@@ -260,9 +371,17 @@ async def post_message(
     if user is None:
         raise ApiError(401, "UNAUTHENTICATED", "Authentication is required")
     now = await current_now(request, session)
-    room, match, state = await room_and_match(session, room_id, now)
+    room, _match, state = await room_and_match(session, room_id, now, lock=True)
     if state != "OPEN":
         raise ApiError(409, "ROOM_CLOSED", "This room is read-only")
+    await enforce_rate_limit(
+        session,
+        model=RoomMessageRecord,
+        user_id=user.id,
+        now=now,
+        limit=10,
+        window=timedelta(minutes=1),
+    )
     body = html.escape(payload.body.strip())
     if not body or len(body) > 2000:
         raise ApiError(
@@ -306,7 +425,7 @@ async def messages(
             422, "INVALID_INPUT", "cursor and after_id are mutually exclusive"
         )
     now = await current_now(request, session)
-    room, _, _ = await room_and_match(session, room_id, now)
+    room, _, _ = await room_and_match(session, room_id, now, lock=True)
     visible = list(
         (
             await session.scalars(
@@ -444,6 +563,15 @@ async def report(
         raise ApiError(401, "UNAUTHENTICATED", "Authentication is required")
     if await session.get(RoomMessageRecord, str(payload.target_id)) is None:
         raise ApiError(404, "NOT_FOUND", "Message was not found")
+    now = await current_now(request, session)
+    await enforce_rate_limit(
+        session,
+        model=ReportRecord,
+        user_id=user.id,
+        now=now,
+        limit=5,
+        window=timedelta(hours=1),
+    )
     item = ReportRecord(
         reporter_user_id=user.id,
         target_kind=payload.target_kind,

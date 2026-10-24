@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import base64
 import binascii
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -36,6 +36,14 @@ async def read_data(session: AsyncSession) -> dict[str, Any]:
     return await persisted_manifest(session) or manifest()
 
 
+def require_utc(value: datetime | None, field: str) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None or value.utcoffset() != UTC.utcoffset(value):
+        raise ApiError(422, "INVALID_INPUT", f"{field} must be a UTC timestamp")
+    return value.astimezone(UTC)
+
+
 def match_cursor(fixture: dict[str, Any]) -> str:
     value = f"{fixture['kickoff_at']}|{fixture['id']}".encode("utf-8")
     return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
@@ -53,7 +61,7 @@ def parse_match_cursor(cursor: str) -> tuple[str, str]:
 
 @router.get("/journey", response_model=JourneyResponse)
 async def journey(
-    team_id: str = Query(...), season: int = Query(...), session: AsyncSession = Depends(get_session)
+    request: Request, team_id: str = Query(...), season: int = Query(...), session: AsyncSession = Depends(get_session)
 ) -> JourneyResponse:
     data = await read_data(session)
     competition = data["competition"]
@@ -61,8 +69,9 @@ async def journey(
     if season != competition["season_start_year"] or team_id not in team_ids:
         raise ApiError(422, "INVALID_INPUT", "Unknown team or season")
     fixtures = [item for item in data["fixtures"] if team_id in (item["home_team_id"], item["away_team_id"])]
+    now, _, _ = await runtime_state(session, request.app.state.settings.demo_clock_iso)
     return JourneyResponse(
-        items=[summary(item, data) for item in sorted(fixtures, key=lambda item: item["kickoff_at"])],
+        items=[summary(item, data, server_now_utc=now) for item in sorted(fixtures, key=lambda item: item["kickoff_at"])],
         team_id=UUID(team_id),
         season_start_year=season,
     )
@@ -70,7 +79,10 @@ async def journey(
 
 @router.get("/matches", response_model=Page)
 async def matches(
+    request: Request,
     competition: str = Query(...),
+    from_value: datetime | None = Query(None, alias="from"),
+    to_value: datetime | None = Query(None, alias="to"),
     status: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = Query(None),
@@ -79,23 +91,35 @@ async def matches(
     data = await read_data(session)
     if competition != data["competition"]["code"]:
         raise ApiError(422, "INVALID_INPUT", "Unsupported competition")
-    fixtures: list[dict[str, Any]] = [item for item in data["fixtures"] if status is None or item["status"] == status]
+    from_utc = require_utc(from_value, "from")
+    to_utc = require_utc(to_value, "to")
+    if from_utc is not None and to_utc is not None and from_utc > to_utc:
+        raise ApiError(422, "INVALID_INPUT", "from must not be after to")
+    fixtures: list[dict[str, Any]] = [
+        item
+        for item in data["fixtures"]
+        if (status is None or item["status"] == status)
+        and (from_utc is None or datetime.fromisoformat(item["kickoff_at"].replace("Z", "+00:00")) >= from_utc)
+        and (to_utc is None or datetime.fromisoformat(item["kickoff_at"].replace("Z", "+00:00")) <= to_utc)
+    ]
     ordered = sorted(fixtures, key=lambda item: (item["kickoff_at"], item["id"]))
     if cursor is not None:
         cursor_key = parse_match_cursor(cursor)
         ordered = [item for item in ordered if (item["kickoff_at"], item["id"]) > cursor_key]
     page = ordered[:limit]
     next_cursor = match_cursor(page[-1]) if len(ordered) > len(page) else None
-    return Page(items=[summary(item, data) for item in page], next_cursor=next_cursor)
+    now, _, _ = await runtime_state(session, request.app.state.settings.demo_clock_iso)
+    return Page(items=[summary(item, data, server_now_utc=now) for item in page], next_cursor=next_cursor)
 
 
 @router.get("/matches/{match_id}", response_model=MatchDetail)
-async def match_detail(match_id: str, session: AsyncSession = Depends(get_session)) -> MatchDetail:
+async def match_detail(request: Request, match_id: str, session: AsyncSession = Depends(get_session)) -> MatchDetail:
     data = await read_data(session)
     fixture = fixture_by_id(data, match_id)
     if fixture is None:
         raise ApiError(404, "NOT_FOUND", "Match was not found")
-    base = summary(fixture, data)
+    now, _, _ = await runtime_state(session, request.app.state.settings.demo_clock_iso)
+    base = summary(fixture, data, server_now_utc=now)
     events = [
         MatchEvent(
             id=item["id"],
