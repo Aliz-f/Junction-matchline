@@ -34,6 +34,7 @@ from app.db.football_models import (
 )
 from app.db.models import SessionRecord, UserRecord
 from app.seed.loader import load_demo_manifest
+from app.seed.validation import validate_demo_manifest
 
 
 def utc(value: str) -> datetime:
@@ -43,6 +44,7 @@ def utc(value: str) -> datetime:
 async def seed_demo(session: AsyncSession, *, commit: bool = True) -> None:
     """Idempotently replace the BE-02 demo-domain rows from the frozen manifest."""
     manifest = load_demo_manifest()
+    validate_demo_manifest(manifest)
     # Delete children first: PostgreSQL correctly enforces that a baseline reset
     # cannot leave audit/replay rows attached to replaced synthetic fixtures.
     await session.execute(delete(ReportRecord))

@@ -86,7 +86,18 @@ class Match(Base):
     home_score: Mapped[int | None]
     away_score: Mapped[int | None]
     capabilities: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
-    __table_args__ = (UniqueConstraint("provider", "provider_id"), CheckConstraint("home_team_id <> away_team_id"),)
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_id"),
+        CheckConstraint("home_team_id <> away_team_id"),
+        CheckConstraint(
+            "(status IN ('SCHEDULED', 'POSTPONED', 'CANCELLED', 'SUSPENDED', 'UNKNOWN') "
+            "AND home_score IS NULL AND away_score IS NULL) OR "
+            "(status IN ('LIVE', 'HALFTIME', 'FINISHED') "
+            "AND home_score IS NOT NULL AND away_score IS NOT NULL "
+            "AND home_score >= 0 AND away_score >= 0)",
+            name="ck_matches_status_score_consistency",
+        ),
+    )
 
 
 class MatchEventRecord(Base):

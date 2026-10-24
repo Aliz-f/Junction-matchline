@@ -6,6 +6,7 @@ seed and state invariants cheap to exercise for every backend test run.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
+from copy import deepcopy
 
 import pytest
 from sqlalchemy import select
@@ -15,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.db.football_models import Match, PredictionRecord, RuntimeState
 from app.db.models import Base, SessionRecord, UserRecord
 from app.jobs.demo_transition import apply_scenario_to_session
+from app.seed.loader import load_demo_manifest
 from app.seed.service import seed_demo
+from app.seed.validation import validate_demo_manifest
 from app.services.demo_football import persisted_manifest
 from app.services.demo_transition_hooks import DemoTransitionHook
 
@@ -119,3 +122,24 @@ async def test_prediction_direction_constraint_is_enforced_by_database(database_
     with pytest.raises(IntegrityError):
         await database_session.commit()
     await database_session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_match_status_score_constraint_is_enforced_by_database(database_session: AsyncSession) -> None:
+    await seed_demo(database_session)
+    fixture = await database_session.get(Match, "30000000-0000-4000-8000-000000000001")
+    assert fixture is not None
+    fixture.status = "FINISHED"
+    with pytest.raises(IntegrityError):
+        await database_session.commit()
+    await database_session.rollback()
+
+
+def test_seed_validation_rejects_duplicate_team_participation() -> None:
+    data = deepcopy(load_demo_manifest())
+    duplicate = deepcopy(data["fixtures"][0])
+    duplicate["id"] = "30000000-0000-4000-8000-000000000099"
+    duplicate["away_team_id"] = "20000000-0000-4000-8000-000000000004"
+    data["fixtures"].append(duplicate)
+    with pytest.raises(ValueError, match="duplicate team participation"):
+        validate_demo_manifest(data)
