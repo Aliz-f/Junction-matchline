@@ -27,21 +27,21 @@ from app.core.logging import SecretRedactionFilter
 from app.db.session import configure_database
 from app.providers.demo import DemoSportsDataProvider
 from app.schemas.contract import (
-    CompetitionSummary,
     CompetitionsResponse,
+    CompetitionSummary,
     ErrorEnvelope,
     FavoriteRequest,
     FavoriteResponse,
     HealthResponse,
+    MatchdaysResponse,
     MetaCapabilities,
     MetaView,
-    MatchdaysResponse,
     PredictionRequest,
     ReportRequest,
     RoomCreateRequest,
     RoomMessageRequest,
-    TeamSummary,
     TeamsResponse,
+    TeamSummary,
     WhatifMessageRequest,
     WhatifThreadRequest,
 )

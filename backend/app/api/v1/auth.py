@@ -10,10 +10,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ApiError
-from app.core.security import hash_password, hash_session_token, new_session_token, password_matches
+from app.core.security import (
+    hash_password,
+    hash_session_token,
+    new_session_token,
+    password_matches,
+)
 from app.db.models import SessionRecord, UserRecord
 from app.db.session import get_session
-from app.schemas.contract import AuthUserResponse, ErrorEnvelope, LoginRequest, Plan, RegisterRequest, Role, UserPublic
+from app.schemas.contract import (
+    AuthUserResponse,
+    ErrorEnvelope,
+    LoginRequest,
+    Plan,
+    RegisterRequest,
+    Role,
+    UserPublic,
+)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 ERRORS = {401: {"model": ErrorEnvelope}, 403: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}}
