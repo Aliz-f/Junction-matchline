@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { ENGLAND_PATHS, ENGLAND_VIEWBOX, projectToEngland } from "@/lib/geo/england";
 import { manifest } from "@/mocks/fixtures";
+import { buildTerrain } from "@/components/map/terrain";
 
 const CITIES = {
   newcastle: { lat: 54.9757, lng: -1.6216 },
@@ -94,5 +95,41 @@ describe("projectToEngland", () => {
     const points = manifest.venues.map((v) => projectToEngland(v.lat, v.lng));
     const keys = new Set(points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`));
     expect(keys.size).toBe(manifest.venues.length);
+  });
+});
+
+describe("decorative terrain", () => {
+  it("is identical on every call, so server and client renders match", () => {
+    const a = buildTerrain(ENGLAND_VIEWBOX.width, ENGLAND_VIEWBOX.height);
+    const b = buildTerrain(ENGLAND_VIEWBOX.width, ENGLAND_VIEWBOX.height);
+    expect(a).toEqual(b);
+  });
+
+  it("produces shapes within the outline's bounding box", () => {
+    const { patches, hills } = buildTerrain(ENGLAND_VIEWBOX.width, ENGLAND_VIEWBOX.height);
+    for (const patch of patches) {
+      expect(patch.x).toBeGreaterThanOrEqual(0);
+      expect(patch.x).toBeLessThanOrEqual(ENGLAND_VIEWBOX.width);
+      expect(patch.y).toBeGreaterThanOrEqual(0);
+      expect(patch.y).toBeLessThanOrEqual(ENGLAND_VIEWBOX.height);
+    }
+    for (const hill of hills) {
+      expect(hill.r).toBeGreaterThan(0);
+    }
+  });
+
+  it("weights upland toward the north and west", () => {
+    // Ornament, but it should not read as obviously wrong.
+    const { hills } = buildTerrain(ENGLAND_VIEWBOX.width, ENGLAND_VIEWBOX.height);
+    const half = ENGLAND_VIEWBOX.height / 2;
+    const northern = hills.filter((h) => h.y < half).length;
+    const southern = hills.length - northern;
+    expect(northern).toBeGreaterThan(southern);
+  });
+
+  it("scatters enough to read as relief without bloating the DOM", () => {
+    const { patches, hills } = buildTerrain(ENGLAND_VIEWBOX.width, ENGLAND_VIEWBOX.height);
+    expect(hills.length).toBeGreaterThan(40);
+    expect(hills.length + patches.length).toBeLessThan(250);
   });
 });

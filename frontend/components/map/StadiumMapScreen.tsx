@@ -16,7 +16,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMatchdays, useMeta, useSession, useStadiumMap } from "@/lib/api/hooks";
+import { useCompetitions, useMatchdays, useMeta, useSession, useStadiumMap } from "@/lib/api/hooks";
 import { readGuestFavorite } from "@/lib/favorite-team";
 import { ApiError } from "@/lib/api/client";
 import { EmptyState, ErrorState, SkeletonList } from "@/components/ui/States";
@@ -91,6 +91,11 @@ export function StadiumMapScreen() {
   }, [serverNow, selector]);
 
   const map = useStadiumMap(selector ?? { date: null, matchday: null });
+  const competitions = useCompetitions();
+
+  // The banner uses the server's own competition name, not hardcoded branding.
+  const competitionLabel =
+    competitions.data?.items.find((item) => item.code === map.data?.competition)?.name ?? null;
 
   // CT-15: a signed-in viewer's favourite is the server's, null included.
   const favoriteTeamId = user ? user.favorite_team_id : guestFavorite;
@@ -217,6 +222,8 @@ export function StadiumMapScreen() {
             favoriteTeamId={favoriteTeamId}
             onSelect={setHighlight}
             selectedVenueId={highlight}
+            competitionName={competitionLabel}
+            seasonStartYear={map.data.season_start_year}
           />
 
           <VenueList
