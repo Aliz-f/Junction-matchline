@@ -70,6 +70,16 @@ async def test_seed_transition_and_runtime_state_are_persisted(database_session:
     assert projection is not None
     assert next(item for item in projection["fixtures"] if item["id"] == upcoming.id)["status"] == "LIVE"
 
+    await apply_scenario_to_session(database_session, "upcoming_finished")
+    await database_session.commit()
+    finished_state = await database_session.get(RuntimeState, 1)
+    await database_session.refresh(upcoming)
+    assert finished_state is not None
+    assert finished_state.demo_clock_utc.isoformat().startswith("2026-11-01T17:30:00")
+    assert finished_state.scenario_name == "upcoming_finished"
+    assert upcoming.status == "FINISHED"
+    assert (upcoming.home_score, upcoming.away_score) == (2, 1)
+
 
 @pytest.mark.asyncio
 async def test_clock_change_never_changes_match_status(database_session: AsyncSession) -> None:
