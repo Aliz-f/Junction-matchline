@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 Utc = Annotated[str, Field(pattern=r"^.+Z$")]
 
@@ -209,8 +209,25 @@ class HealthResponse(ContractModel):
 
 class PredictionRequest(ContractModel):
     outcome: Outcome
-    home_score: int | None
-    away_score: int | None
+    home_score: StrictInt | None
+    away_score: StrictInt | None
+
+    @model_validator(mode="after")
+    def score_pair_matches_outcome(self) -> "PredictionRequest":
+        if (self.home_score is None) != (self.away_score is None):
+            raise ValueError("home_score and away_score must both be null or both be present")
+        if self.home_score is None:
+            return self
+        if self.home_score < 0 or self.away_score < 0:
+            raise ValueError("scores must be nonnegative")
+        actual = Outcome.DRAW
+        if self.home_score > self.away_score:
+            actual = Outcome.HOME
+        elif self.home_score < self.away_score:
+            actual = Outcome.AWAY
+        if actual != self.outcome:
+            raise ValueError("scores must imply the requested outcome")
+        return self
 
 
 class RoomCreateRequest(ContractModel):
