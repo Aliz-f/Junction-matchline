@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.db.football_models import Match, RuntimeState
 from app.db.session import configure_database
 from app.seed.loader import scenario_data
+from app.seed.service import seed_demo
 
 
 async def apply_scenario(name: str) -> None:
@@ -22,6 +23,9 @@ async def apply_scenario(name: str) -> None:
     configure_database(holder, settings.database_url)
     scenario = scenario_data(name)
     async with holder.state.session_factory() as session:
+        if name == "baseline":
+            await seed_demo(session)
+            return
         state = await session.scalar(select(RuntimeState).where(RuntimeState.id == 1).with_for_update())
         if state is None:
             raise RuntimeError("demo state is not seeded")
