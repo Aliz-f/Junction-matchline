@@ -184,7 +184,9 @@ describe("board geometry", () => {
   });
 
   it("handles a single fixture and an empty season without throwing", () => {
-    expect(trailPath(1)).toBe("M 50 75");
+    // Room callouts need a little more vertical breathing room than the
+    // original board, so the node centre follows the current 184px row.
+    expect(trailPath(1)).toBe("M 50 92");
     expect(trailPath(0)).toBe("");
   });
 });

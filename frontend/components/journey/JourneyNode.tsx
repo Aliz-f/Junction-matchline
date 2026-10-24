@@ -11,12 +11,16 @@
  * `<a>`, so it is keyboard-reachable and middle-clickable; the trail behind it
  * is decorative SVG.
  */
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { competitionToken } from "@/lib/design/competitions";
 import { statusToken } from "@/lib/design/status";
 import { CompetitionGlyph, StatusGlyph } from "@/components/ui/Icon";
 import { formatKickoff, machineDateTime } from "@/lib/time";
 import type { MatchSummary } from "@/lib/api/types";
+import { JourneyRoomPopover } from "./JourneyRoomPopover";
 
 type Props = {
   readonly match: MatchSummary;
@@ -29,6 +33,7 @@ type Props = {
 };
 
 export function JourneyNode({ match, teamId, isNext, side }: Props) {
+  const [openRoom, setOpenRoom] = useState<"PRE_MATCH" | "POST_MATCH" | null>(null);
   const competition = competitionToken(match.competition.brand_key);
   const status = statusToken(match.status);
   const accent = `rgb(var(${competition.accentVar}))`;
@@ -43,11 +48,9 @@ export function JourneyNode({ match, teamId, isNext, side }: Props) {
   const hasScore = home !== null && away !== null && !status.withoutResult;
 
   // Availability comes from backend `features`, never inferred from status.
-  const actions = [
-    match.features.predictions_open ? "Predict" : null,
-    match.features.pre_match_room || match.features.post_match_room ? "Discuss" : null,
-    match.features.whatif_available ? "What-if" : null,
-  ].filter((value): value is string => value !== null);
+  const actions = [match.features.predictions_open ? "Predict" : null, match.features.whatif_available ? "What-if" : null].filter(
+    (value): value is string => value !== null,
+  );
 
   // One accessible name carrying everything the visuals convey.
   const label = [
@@ -62,7 +65,18 @@ export function JourneyNode({ match, teamId, isNext, side }: Props) {
     .join(" ");
 
   return (
-    <Link
+    <>
+      {match.features.pre_match_room ? (
+        <button
+          type="button"
+          onClick={() => setOpenRoom("PRE_MATCH")}
+          className="journey-room-callout journey-room-before"
+          aria-label={`Open pre-match discussion for ${match.home_team.short_name} versus ${match.away_team.short_name}`}
+        >
+          <span aria-hidden="true">◌</span> Pre-match
+        </button>
+      ) : null}
+      <Link
       href={`/matches/${match.id}`}
       aria-label={label}
       aria-current={isNext ? "step" : undefined}
@@ -98,24 +112,36 @@ export function JourneyNode({ match, teamId, isNext, side }: Props) {
         <span
           aria-hidden="true"
           className={[
-            "relative flex items-center justify-center rounded-full text-white shadow-sm",
+            "relative flex items-center justify-center overflow-hidden rounded-full text-white shadow-sm",
             isNext ? "h-[4.25rem] w-[4.25rem]" : "h-16 w-16",
           ].join(" ")}
           style={{ backgroundColor: accent }}
         >
+          {/*
+            Competition identity is deliberately large enough to read inside
+            every node. It stays separate from the status ring and status
+            glyph, so a star/cup/pitch is never mistaken for match state.
+          */}
+          <span
+            aria-hidden="true"
+            data-competition-motif={competition.motif}
+            className="absolute inset-2 opacity-30"
+          >
+            <CompetitionGlyph motif={competition.motif} />
+          </span>
           {hasScore ? (
-            <span className="font-mono text-lg font-black tabular-nums leading-none">
+            <span className="relative font-mono text-lg font-black tabular-nums leading-none">
               {home}
               <span className="opacity-70">–</span>
               {away}
             </span>
           ) : match.matchday !== null ? (
-            <span className="flex flex-col items-center leading-none">
+            <span className="relative flex flex-col items-center leading-none">
               <span className="text-[0.5625rem] font-bold uppercase opacity-80">MD</span>
               <span className="font-mono text-lg font-black tabular-nums">{match.matchday}</span>
             </span>
           ) : (
-            <span className="h-6 w-6">
+            <span className="relative h-6 w-6">
               <CompetitionGlyph motif={competition.motif} />
             </span>
           )}
@@ -146,6 +172,10 @@ export function JourneyNode({ match, teamId, isNext, side }: Props) {
 
       {/* Caption. Text labels keep status and score off colour alone. */}
       <span className={["flex flex-col gap-0.5", side === "left" ? "text-center" : "text-center"].join(" ")}>
+        <span className="inline-flex items-center justify-center gap-1 text-[0.5625rem] font-black uppercase tracking-[0.1em]" style={{ color: accent }}>
+          <span aria-hidden="true" className="h-3 w-3"><CompetitionGlyph motif={competition.motif} /></span>
+          {competition.label}
+        </span>
         <span className="truncate text-xs font-bold text-ink">
           {isHome || isAway ? (
             <>
@@ -184,6 +214,18 @@ export function JourneyNode({ match, teamId, isNext, side }: Props) {
           </span>
         ) : null}
       </span>
-    </Link>
+      </Link>
+      {match.features.post_match_room ? (
+        <button
+          type="button"
+          onClick={() => setOpenRoom("POST_MATCH")}
+          className="journey-room-callout journey-room-after"
+          aria-label={`Open post-match discussion for ${match.home_team.short_name} versus ${match.away_team.short_name}`}
+        >
+          <span aria-hidden="true">◌</span> Post-match
+        </button>
+      ) : null}
+      {openRoom ? <JourneyRoomPopover matchId={match.id} kind={openRoom} onClose={() => setOpenRoom(null)} /> : null}
+    </>
   );
 }

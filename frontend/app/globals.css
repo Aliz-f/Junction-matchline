@@ -115,6 +115,27 @@
     opacity: 0.45;
     animation: status-pulse 1.8s ease-out infinite;
   }
+
+  .journey-room-callout {
+    position: absolute;
+    z-index: 1;
+    width: max-content;
+    max-width: 7.5rem;
+    border: 1px solid rgb(var(--line));
+    border-radius: 9999px;
+    background: rgb(var(--surface-raised));
+    padding: 0.3rem 0.55rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    line-height: 1;
+    color: rgb(var(--ink));
+    box-shadow: 0 5px 14px rgb(15 23 42 / 0.12);
+  }
+
+  .journey-room-callout:hover { background: rgb(var(--surface-sunken)); }
+  .journey-room-before { right: calc(100% + 0.45rem); top: 1.4rem; }
+  .journey-room-after { left: calc(100% + 0.45rem); top: 3rem; }
+
 }
 
 @keyframes status-pulse {

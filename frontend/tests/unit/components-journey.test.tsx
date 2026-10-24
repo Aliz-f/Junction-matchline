@@ -107,6 +107,20 @@ describe("JourneyNode framing and linking", () => {
   });
 });
 
+describe("JourneyNode competition identity", () => {
+  it("renders a prominent original star motif and named label for Champions League fixtures", () => {
+    const base = byStatus("FINISHED");
+    const championsLeague = {
+      ...base,
+      competition: { ...base.competition, brand_key: "ucl_demo", name: "Champions League" },
+    };
+    const { container } = renderNode(championsLeague);
+
+    expect(screen.getByText("Champions League")).toBeInTheDocument();
+    expect(container.querySelector('[data-competition-motif="star"]')).toBeInTheDocument();
+  });
+});
+
 describe("CompetitionFilter", () => {
   const counts = { ALL: 4, LEAGUE: 4, CUP: 0 };
 

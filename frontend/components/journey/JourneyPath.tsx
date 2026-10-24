@@ -25,7 +25,7 @@ type Props = {
 };
 
 /** Vertical spacing per node, in pixels. */
-const ROW = 150;
+const ROW = 184;
 /** Horizontal swing either side of centre, as a percentage of board width. */
 const SWING = 26;
 
